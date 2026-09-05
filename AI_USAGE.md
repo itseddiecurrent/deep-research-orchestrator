@@ -8,9 +8,11 @@ reviewed architecture/evaluation documents, implemented and tested the prototype
 recovered an interrupted session from repository state, managed a local conversation-
 history export, and checked submission deliverables.
 
-No separate AI-generated conversation transcript was created. The authentic filtered
-Codex session export is in [`logs/codex-session-export.jsonl`](logs/codex-session-export.jsonl),
-with its format and exclusions documented in [`logs/README.md`](logs/README.md).
+The reviewer-friendly transcript is in
+[`logs/codex-session-transcript.txt`](logs/codex-session-transcript.txt). It is
+mechanically rendered from the authentic filtered
+[`logs/codex-session-export.jsonl`](logs/codex-session-export.jsonl), with formats and
+exclusions documented in [`logs/README.md`](logs/README.md).
 
 ## How the assistant was used
 

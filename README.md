@@ -4,7 +4,8 @@
 
 | Deliverable | Location |
 |---|---|
-| Prompt history / conversation logs | [`logs/codex-session-export.jsonl`](logs/codex-session-export.jsonl) |
+| Prompt history / conversation logs (readable) | [`logs/codex-session-transcript.txt`](logs/codex-session-transcript.txt) |
+| Prompt history / conversation logs (raw JSONL) | [`logs/codex-session-export.jsonl`](logs/codex-session-export.jsonl) |
 | Conversation-log format and exclusions | [`logs/README.md`](logs/README.md) |
 | Design document | [`DESIGN.md`](DESIGN.md) |
 | Evaluation plan | [`EVALUATION.md`](EVALUATION.md) |

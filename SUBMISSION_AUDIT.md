@@ -13,7 +13,7 @@ Status is based on repository evidence:
 
 | Requirement | Status | Evidence / limitation |
 |---|---|---|
-| Prompt history | Complete, reviewable export | `logs/codex-session-export.jsonl`; all five matching workspace sessions, retaining authentic user/assistant/tool records with security/internal exclusions in `logs/README.md` |
+| Prompt history | Complete, readable + raw export | `logs/codex-session-transcript.txt` for review and `logs/codex-session-export.jsonl` as the canonical machine-readable source; both contain all retained user/assistant/tool events across five workspace sessions, with exclusions in `logs/README.md` |
 | Design document | Complete | `DESIGN.md`; four direct answers, 20 sections, five Mermaid diagrams, and an updated prototype boundary |
 | Evaluation plan | Complete | `EVALUATION.md`; benchmark, metrics, judge rubric, invariants, faults, repetitions, and gates; it is not a results report |
 | AI-use disclosure | Complete | `AI_USAGE.md`; includes the human scope correction and implementation/recovery work |
