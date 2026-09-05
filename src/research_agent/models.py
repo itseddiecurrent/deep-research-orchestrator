@@ -19,6 +19,7 @@ from pydantic import (
     HttpUrl,
     StringConstraints,
     TypeAdapter,
+    field_validator,
     model_validator,
 )
 
@@ -75,6 +76,7 @@ class TraceEventType(str, Enum):
     TOOL_REQUESTED = "tool_requested"
     TOOL_COMPLETED = "tool_completed"
     TOOL_FAILED = "tool_failed"
+    SOURCE_CREATED = "source_created"
     EVIDENCE_CREATED = "evidence_created"
     EVALUATION_COMPLETED = "evaluation_completed"
     SYNTHESIS_STARTED = "synthesis_started"
@@ -281,8 +283,15 @@ class SourceSnapshot(StrictModel):
     title: NonEmptyStr
     retrieved_at: AwareDatetime = Field(default_factory=utc_now)
     media_type: NonEmptyStr = "text/markdown"
-    content: NonEmptyStr
+    content: str = Field(min_length=1)
     content_hash: Sha256Hex
+
+    @field_validator("content")
+    @classmethod
+    def content_is_not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("source content cannot be blank")
+        return value
 
 
 class SourceChunk(StrictModel):
@@ -290,7 +299,7 @@ class SourceChunk(StrictModel):
     source_snapshot_id: NonEmptyStr
     start_offset: int = Field(ge=0)
     end_offset: int = Field(gt=0)
-    text: NonEmptyStr
+    text: str = Field(min_length=1)
     content_hash: Sha256Hex
 
     @model_validator(mode="after")
@@ -305,9 +314,16 @@ class Evidence(StrictModel):
     task_id: NonEmptyStr
     claim: NonEmptyStr
     source_chunk_ids: list[NonEmptyStr] = Field(min_length=1)
-    verbatim_excerpt: NonEmptyStr
+    verbatim_excerpt: str = Field(min_length=1)
     confidence: float = Field(ge=0.0, le=1.0)
     created_at: AwareDatetime = Field(default_factory=utc_now)
+
+    @field_validator("verbatim_excerpt")
+    @classmethod
+    def excerpt_is_not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("evidence excerpt cannot be blank")
+        return value
 
 
 class ReportClaim(StrictModel):

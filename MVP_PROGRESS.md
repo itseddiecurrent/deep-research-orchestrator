@@ -86,13 +86,13 @@ Status: **Approved as the prototype direction; implementation remains milestone-
   - [x] Finish, limit, invalid-output, failure, and bounded-retry behavior
   - [x] Structured trace emission
   - [x] Deterministic runtime/registry/failure tests
-- [ ] Milestone 3 — Provenance and citations
-  - [ ] Normalize raw tool results into hashed source snapshots and chunks
-  - [ ] Structured evidence extraction with exact excerpt validation
-  - [ ] Reject evidence without successful source/tool lineage
-  - [ ] Structured synthesis using existing evidence IDs only
-  - [ ] Deterministic lineage validation and inline citation rendering
-  - [ ] Citation/provenance/fabricated-ID tests
+- [x] Milestone 3 — Provenance and citations
+  - [x] Normalize raw tool results into hashed source snapshots and chunks
+  - [x] Structured evidence extraction with exact excerpt validation
+  - [x] Reject evidence without successful source/tool lineage
+  - [x] Structured synthesis using existing evidence IDs only
+  - [x] Deterministic lineage validation and inline citation rendering
+  - [x] Citation/provenance/fabricated-ID tests
 - [ ] Milestone 4 — Real external integration and CLI
   - [ ] OpenAI Responses API adapter with configurable model
   - [ ] Tavily `search_web` adapter with timeout and output bounds
@@ -117,11 +117,11 @@ reported separately from deterministic test success.
 
 ## 4. Current Repository State
 
-As of 2026-09-05 13:16 +08:00:
+As of 2026-09-05 14:06 +08:00:
 
-- Prototype package files now include `tools.py`, `llm.py`, and `runtime.py` alongside
-  `models.py`, `cli.py`, and `__init__.py`; `pyproject.toml` defines the package and
-  `research-agent` entry point.
+- Prototype package files now include `tools.py`, `llm.py`, `runtime.py`,
+  `provenance.py`, and `synthesis.py` alongside `models.py`, `cli.py`, and
+  `__init__.py`; `pyproject.toml` defines the package and `research-agent` entry point.
 - Strict Pydantic schemas cover the session, limits, objective/task plan, actions,
   tool execution records, provenance/citations, and trace events.
 - A generic versioned registry validates strict Pydantic input/output models, rejects
@@ -131,11 +131,19 @@ As of 2026-09-05 13:16 +08:00:
   context.
 - Runtime tool attempts enforce timeout, idempotent retry, logical-call, iteration,
   model-output, and result-size limits; failures remain explicit observations.
-- Tests are in five files under `tests/`; 38 deterministic offline tests pass.
+- Canonical retrieval output can now be ingested into content-hashed snapshots and
+  fixed-size exact-offset chunks without stripping source whitespace.
+- Structured evidence extraction accepts candidates only when tasks, chunks,
+  snapshots, successful results/calls, hashes, offsets, and verbatim excerpts form a
+  valid in-session lineage chain.
+- Structured synthesis accepts existing evidence IDs only; report claims/citations
+  are built and validated atomically, then inline numbers and stored source URLs are
+  rendered deterministically with repeated URLs deduplicated.
+- Tests are now in seven files under `tests/`; 59 deterministic offline tests pass.
 - The CLI exposes help/version and explicitly refuses live research because real LLM
   and search adapters remain Milestone 4 work.
-- No provenance normalizer, evidence extractor, synthesis/citation renderer, real
-  tool, live demo, or measured evaluation result exists yet.
+- No semantic entailment verifier, real tool/provider adapter, live demo, or measured
+  evaluation result exists yet.
 - `README.md`, `DESIGN.md`, `SUBMISSION_AUDIT.md`, and `AI_USAGE.md` still describe
   the pre-prototype checkpoint; their final status reconciliation remains Milestone 6.
   This file is authoritative for incremental prototype progress meanwhile.
@@ -241,38 +249,73 @@ Verified by:
 - installed `research-agent --version` and no-query help smoke checks;
 - no network or paid provider call was made.
 
+### Milestone 3 — provenance and citations
+
+Status: Complete
+
+Implemented:
+
+- strict canonical `ResearchToolOutput`/`RetrievedSource` boundary that requires full
+  source content and rejects snippet-only payloads;
+- exact UTF-8 SHA-256 source/chunk hashing, whitespace-preserving snapshot storage,
+  deterministic fixed-size offsets, full-coverage reconstruction, duplicate-source
+  normalization, and idempotent per-result ingestion;
+- structured `EvidenceCandidate`/`EvidenceBatch` extraction requests with supplied-
+  chunk restrictions, output-token enforcement, atomic creation, and exact excerpt
+  containment;
+- deterministic evidence walks through task → chunk → snapshot → successful tool
+  result/call, including duplicate-ID, hash, offset, missing-link, and failed-lineage
+  rejection;
+- evidence-ID-only `SynthesisDraft`, with free-form URL rejection and atomic creation
+  of `ReportClaim`/`Citation` records;
+- report-level citation integrity checks, stable first-use display numbering,
+  repeated-source URL deduplication, stored-metadata bibliography rendering, partial
+  limitations, and citation/terminal trace events.
+
+Relevant files:
+
+- `src/research_agent/provenance.py`, `src/research_agent/synthesis.py`, updates to
+  `models.py` and `llm.py`, and `tests/test_provenance.py`/
+  `tests/test_synthesis.py`.
+
+Verified by:
+
+- `python -m compileall -q src tests`;
+- `pytest -q -W error`: 59 passed without warnings;
+- `python -m pip check`: no broken requirements;
+- `git diff --check`: passed;
+- no network or paid provider call was made.
+
 ## 6. Current Task
 
-### Review Milestone 2 and authorize Milestone 3
+### Publish the verified Milestone 3 checkpoint
 
-Status: Ready — awaiting human direction
+Status: In progress
 
 Objective:
 
-- review the verified registry/LLM/runtime boundary;
-- confirm whether to begin Milestone 3: source normalization, exact excerpt evidence,
-  structured synthesis, lineage validation, and deterministic citation rendering.
+- commit the verified Milestone 3 implementation and refreshed authentic history;
+- push `main` to the configured GitHub origin and verify local/remote commit equality.
 
 Files expected to be modified:
 
-- none until Milestone 3 is authorized; update this checkpoint first when it is.
+- the Milestone 3 source/tests/checkpoint and authentic history export only.
 
 Expected behavior:
 
-- the repository remains at the verified, published Milestone 2 checkpoint;
-- Milestone 3 begins only with a written behavior/test contract, without adding a
-  real provider or conflating search snippets with evidence.
+- ignored credentials/generated artifacts remain outside Git history;
+- the pushed commit exactly matches the locally verified checkpoint.
 
 Tests that prove completion:
 
-- none for this review gate. Milestone 3 tests will prove content hashing/chunk
-  offsets, exact excerpt containment, successful-call lineage, fabricated/cross-link
-  rejection, synthesis ID restrictions, source deduplication, and rendered citations.
+- staged-content/credential exclusion and `git diff --cached --check`;
+- successful push followed by equal `HEAD` and `origin/main` revisions.
 
 ## 7. Tests and Verification
 
-Current status: 38 deterministic offline tests pass across schemas, CLI, registry,
-scripted LLM client, bounded runtime, failures, retries, timeouts, and trace behavior.
+Current status: 59 deterministic offline tests pass across schemas, CLI, registry,
+scripted LLM client, bounded runtime, provenance, evidence, citation integrity,
+synthesis rendering, failures, retries, timeouts, and trace behavior.
 
 | Required coverage | Status | Planned proof |
 |---|---|---|
@@ -286,9 +329,9 @@ scripted LLM client, bounded runtime, failures, retries, timeouts, and trace beh
 | 8. Finish action terminates | Verified | Complete/partial state; later scripted responses remain unused |
 | 9. Iteration/tool-call limits | Verified | Each cap terminates deterministically; model/result-size limits also tested |
 | 10. Tool failure and bounded retry | Verified | Retryable idempotent timeout/error retries to cap; permanent/non-idempotent does not |
-| 11. Evidence keeps provenance | Schema verified | IDs and serialization retained; referential lineage validation is Milestone 3 |
-| 12. Citation IDs resolve | Planned | Render claim and walk every lineage edge |
-| 13. Fabricated citation IDs rejected | Planned | Synthesis with unknown/cross-session ID fails validation |
+| 11. Evidence keeps provenance | Verified | Exact hashes/offsets/excerpts and successful call→result→snapshot→chunk→evidence walk |
+| 12. Citation IDs resolve | Verified | Claims render only after every evidence/chunk/snapshot/result/call edge validates |
+| 13. Fabricated citation IDs rejected | Verified | Unknown evidence, unrelated source links, duplicate IDs, and free-form URLs fail |
 | 14. Two unrelated queries, same runtime | Planned | Parameterized scripted test plus separate opt-in live demos |
 | Real external tool | Planned | Tavily integration test skipped unless key/network explicitly enabled |
 | Hidden chain-of-thought independence | Schema verified | Trace exposes `decision_summary`; no reasoning field exists |
@@ -318,8 +361,8 @@ must be opt-in and clearly labeled.
 
 ## 9. Remaining Work
 
-1. Review/authorize the Milestone 3 behavior/test contract.
-2. Implement and verify provenance creation and deterministic citation rendering.
+1. Publish the verified Milestone 3 checkpoint and verify the remote revision.
+2. Review/authorize Milestone 4 real provider/tool/CLI integration.
 3. Add and exercise OpenAI and Tavily adapters behind existing interfaces.
 4. Run at least two unrelated demos through the unchanged runtime.
 5. Reconcile reviewer documents and refresh the authentic session export.
@@ -327,21 +370,23 @@ must be opt-in and clearly labeled.
 
 ## 10. Last Verified Checkpoint
 
-Last verified: 2026-09-05 13:49:26 +08:00
+Last verified: 2026-09-05 14:06:00 +08:00
 
-- Repository inventory: written deliverables plus verified Milestone 1–2 package/tests.
-- Git status/diff: local `main` and `origin/main` both resolve to the verified
-  Milestone 2 commit; the worktree was clean immediately after publication.
+- Repository inventory: written deliverables plus verified Milestone 1–3 package/tests.
+- Git status/diff: local/remote started aligned at the published Milestone 2 commit;
+  reviewed Milestone 3 changes are awaiting their checkpoint commit and push.
 - Python compilation: passed for `src` and `tests`.
-- Prototype unit tests: 38 passed without warnings; dependency check passed.
+- Prototype unit tests: 59 passed with warnings treated as errors; dependency and
+  whitespace checks passed.
 - Integration/demo runs: not present; not run.
 - Working behavior: scripted structured planning, dynamic validated tool execution,
-  bounded observation loop, retries/failures/limits, terminal state, and trace work;
-  provenance/citations and live providers do not.
+  bounded observation loop, provenance ingestion/evidence validation, ID-constrained
+  synthesis, deterministic inline citations, retries/failures/limits, terminal state,
+  and trace work; live providers and semantic entailment do not.
 - Prompt history: filtered authentic export is refreshed at milestone boundaries;
   this publication-reconciliation turn may be absent until the next refresh.
-- Commands used: `python -m compileall -q src tests`, `pytest -q`,
-  `python -m pip check`, `research-agent --version`, and CLI help smoke check.
+- Commands used: `python -m compileall -q src tests`, `pytest -q -W error`,
+  `python -m pip check`, and `git diff --check`.
 
 ## 11. Working Rules
 

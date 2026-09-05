@@ -20,7 +20,7 @@ from research_agent.models import NonEmptyStr, StrictModel
 
 
 class LLMRequest(StrictModel):
-    purpose: Literal["plan", "action"]
+    purpose: Literal["plan", "action", "evidence", "synthesis"]
     instructions: NonEmptyStr
     context: dict[str, Any]
     response_schema: dict[str, Any]
