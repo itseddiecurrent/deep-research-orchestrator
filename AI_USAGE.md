@@ -21,7 +21,8 @@ with its format and exclusions documented in [`logs/README.md`](logs/README.md).
   failure schedules, judge rubrics, invariants, and regression gates.
 - Create and edit repository documentation.
 - Implement strict models, the dynamic registry, bounded runtime, provider adapters,
-  provenance/evidence extraction, cited synthesis, CLI composition, and tests.
+  provenance/evidence extraction, cited synthesis, CLI/browser composition, and
+  tests.
 - Diagnose failures from deterministic tests, preserve interrupted uncommitted work,
   and update the incremental checkpoint after verified slices.
 - Check current official OpenAI Responses/Structured Outputs and Tavily Search
@@ -57,27 +58,29 @@ has not been edited out.
   audit, then resumed as a deliberately small sequential CLI implementation.
 - Domain routers, fixed example-query pipelines, unbounded agents, and free-form
   citations were excluded by design.
-- Live calls and demo artifacts were not produced because credentials were absent and
-  the explicit live-test opt-in was false.
+- Paid tests remain opt-in. After credentials became available, bounded manual live
+  calls were used to diagnose provider response limits and evidence-excerpt boundary
+  handling; these were treated as smoke evidence rather than benchmark results.
 
 ## Human review still required
 
 The documents and prototype reflect assistant-generated analysis/code and should
 receive normal human review. The deterministic suite verifies control flow and
 lineage, not research quality. Proposed evaluation thresholds still need calibration;
-security/retention policies need organization-specific approval; and live provider,
-semantic entailment, steering, persistence, and full benchmark claims remain
-unverified or unimplemented as disclosed in `SUBMISSION_AUDIT.md`.
+security/retention policies need organization-specific approval; and semantic
+entailment, steering, persistence, and full benchmark claims remain unverified or
+unimplemented as disclosed in `SUBMISSION_AUDIT.md`.
 
 ## Log-export limitations
 
-The local Codex session file contains internal records not suitable for a submission.
-The exported JSONL retains actual user/assistant messages and tool calls/results, but
-excludes system/developer instructions, encrypted reasoning records, aggregate token
-telemetry, and session-internal metadata. JSON formatting is normalized by `jq`; the
-message and tool-event values are not rewritten. Depending on when the final export
-is refreshed, the final assistant handoff may not yet have been flushed to the local
-source. See [`logs/README.md`](logs/README.md) for the exact filter.
+The local Codex session files contain internal records not suitable for a submission.
+The exported JSONL retains actual user/assistant messages and tool calls/results from
+all five workspace sessions, but excludes system/developer instructions, encrypted
+reasoning records, aggregate token telemetry, and session-internal metadata. JSON
+formatting is normalized by `jq`; the message and tool-event values are not rewritten.
+The active session is represented through the latest export refresh, so the final
+assistant handoff necessarily follows that cutoff. See
+[`logs/README.md`](logs/README.md) for the exact filter.
 
 `AI_USAGE.md` is a disclosure and summary. It is not a replacement for the prompt
 history deliverable.

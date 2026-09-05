@@ -55,7 +55,7 @@ def make_task(
 
 def test_runtime_limits_are_bounded_and_strict() -> None:
     limits = RuntimeLimits(max_tool_calls=0, max_retries_per_tool=0)
-    assert limits.max_iterations == 12
+    assert limits.max_iterations == 16
     assert limits.max_tool_calls == 0
 
     with pytest.raises(ValidationError):

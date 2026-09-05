@@ -6,7 +6,7 @@ from typing import Any, Deque
 
 import pytest
 
-from research_agent.llm import LLMRequest, LLMResponse, ScriptedLLMClient
+from research_agent.llm import LLMClientError, LLMRequest, LLMResponse, ScriptedLLMClient
 from research_agent.models import (
     ObjectiveRequirement,
     ResearchObjective,
@@ -216,15 +216,19 @@ def test_planner_selects_one_of_two_advertised_tools_and_observes_result() -> No
     assert irrelevant.calls == []
     assert [call.query for call in selected.calls] == ["generic topic"]
     assert len(client.requests[0].context["tool_catalog"]) == 2
-    observation = session.observations[0].model_dump(mode="json")
-    assert client.requests[2].context["observations"] == [observation]
-    assert client.requests[2].context["tool_results"][0]["id"] == observation[
-        "tool_result_id"
-    ]
+    observation = session.observations[0]
+    planner_observation = client.requests[2].context["observations"][0]
+    assert planner_observation["id"] == observation.id
+    assert planner_observation["tool_result_id"] == observation.tool_result_id
+    assert planner_observation["success"] is True
+    assert "measured result" in planner_observation["summary"]
+    planner_result = client.requests[2].context["tool_results"][0]
+    assert planner_result["id"] == observation.tool_result_id
+    assert "raw_output" not in planner_result
     assert client.requests[2].context["tool_calls"][0]["tool_name"] == (
         "lookup_benchmarks"
     )
-    assert "measured result" in observation["summary"]
+    assert "measured result" in observation.summary
     assert session.tool_calls[0].status == ToolCallStatus.SUCCEEDED
 
 
@@ -326,6 +330,19 @@ def test_invalid_plan_fails_before_the_action_loop() -> None:
     assert session.iteration_count == 0
     assert len(client.requests) == 1
     assert session.trace[-1].data["error_type"] == "invalid_plan"
+
+
+def test_plan_transport_failure_is_not_mislabeled_as_invalid_model_output() -> None:
+    registry = ToolRegistry()
+    session, _ = run_runtime(
+        "A request whose provider is unavailable",
+        [LLMClientError("transport unavailable")],
+        registry,
+    )
+
+    assert session.status == SessionStatus.FAILED
+    assert session.trace[-1].data["error_type"] == "plan_request_failed"
+    assert session.completion_summary == "Research failed: plan_request_failed."
 
 
 def test_retryable_idempotent_failure_retries_then_succeeds() -> None:
@@ -553,6 +570,14 @@ def test_integrated_runtime_extracts_evidence_before_planning_and_synthesizes() 
     assert second_action.context["evidence"] == [
         session.evidence[0].model_dump(mode="json")
     ]
+    assert "raw_output" not in second_action.context["tool_results"][0]
+    assert second_action.context["observations"][0]["summary"].startswith(
+        "Tool succeeded; 1 full-content source(s)"
+    )
+    assert second_action.context["sources"][0]["source_url"] == (
+        "https://example.test/research"
+    )
+    assert "content" not in second_action.context["sources"][0]
     assert session.status == SessionStatus.COMPLETED
     assert "The researched fact is supported. [1]" in session.completion_summary
     assert "https://example.test/research" in session.completion_summary

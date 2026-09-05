@@ -4,8 +4,8 @@ Status is based on repository evidence:
 
 - **Complete** — required written artifact exists and was checked.
 - **Verified** — implemented behavior has deterministic test evidence.
-- **Implemented, live unverified** — adapter/code exists and is tested with fakes, but
-  no real provider call succeeded in this environment.
+- **Live smoke verified** — a bounded real-provider run completed the named vertical
+  slice; this does not imply benchmarked answer quality or production readiness.
 - **Designed** — described in the architecture/evaluation plan but not implemented.
 - **Not implemented** — neither code nor measured result exists.
 
@@ -13,12 +13,12 @@ Status is based on repository evidence:
 
 | Requirement | Status | Evidence / limitation |
 |---|---|---|
-| Prompt history | Complete, filtered export | `logs/codex-session-export.jsonl`; authentic user/assistant/tool records with exclusions in `logs/README.md` |
+| Prompt history | Complete, reviewable export | `logs/codex-session-export.jsonl`; all five matching workspace sessions, retaining authentic user/assistant/tool records with security/internal exclusions in `logs/README.md` |
 | Design document | Complete | `DESIGN.md`; four direct answers, 20 sections, five Mermaid diagrams, and an updated prototype boundary |
 | Evaluation plan | Complete | `EVALUATION.md`; benchmark, metrics, judge rubric, invariants, faults, repetitions, and gates; it is not a results report |
 | AI-use disclosure | Complete | `AI_USAGE.md`; includes the human scope correction and implementation/recovery work |
 | Reviewer README | Complete | `README.md`; commands and verified/designed/unverified status |
-| Prototype | Verified offline | Installable CLI and 100 passing deterministic tests; one live test skipped because opt-in/credentials are absent |
+| Prototype | Verified offline + live smoke | Installable CLI/browser UI, 116 passing deterministic tests, one default-skipped paid test, and bounded manual OpenAI/Tavily vertical-slice runs |
 
 ## 1. System Architecture
 
@@ -26,7 +26,7 @@ Status is based on repository evidence:
 |---|---|---|
 | Explicit planner/execution loop | Verified | `runtime.py`; structured plan, action, tool, observation, finish loop |
 | Session state | Verified, prototype subset | Strict in-memory `ResearchSession`; no durable or multi-turn session service |
-| LLM-driven planning/tool choice | Verified offline | Scripted clients drive plans/actions; OpenAI adapter is offline-tested |
+| LLM-driven planning/tool choice | Verified offline + live smoke | Scripted clients cover deterministic behavior; live OpenAI runs generated plans/actions |
 | User steering | Designed | `DESIGN.md` §§4 Q1 and 8; no runtime message reconciliation |
 | Objective versioning | Designed | Schema has a version, but update/reconciliation behavior is not implemented |
 | Task dependencies / DAG | Schema verified | References and cycles validate; no DAG scheduler/lifecycle execution |
@@ -43,7 +43,7 @@ Status is based on repository evidence:
 | Dynamic semantic selection | Verified offline | Planner chooses among advertised fake tools; no domain router exists |
 | Structured interfaces | Verified | Strict Pydantic plan/action/tool/evidence/synthesis schemas reject extra fields |
 | Runtime validation | Verified subset | Tool/version, input/output, task reference, timeout, retry, and size checks; broader permission/URL policy is designed only |
-| Real external research tool | Implemented, live unverified | Tavily `search_web` requests full cleaned Markdown and maps typed failures; HTTP is mocked in default tests |
+| Real external research tool | Live smoke verified | Tavily `search_web` requests full cleaned Markdown and maps typed failures; default tests mock HTTP, while bounded manual runs retrieved live sources |
 | Retrieval/extraction separation | Verified | Snippets and failed results cannot create sources/evidence; extraction uses exact chunks |
 | Evidence/provenance | Verified | Hashes, offsets, excerpts, atomic creation, and call/result/snapshot/chunk/evidence walks tested |
 | Inline citation traceability | Verified | Synthesis accepts evidence IDs; renderer resolves stored sources and validates all edges |
@@ -56,7 +56,7 @@ Status is based on repository evidence:
 |---|---|---|
 | Malformed structured output | Verified | Invalid plan/action/evidence/synthesis output is rejected before unsafe mutation |
 | Tool failure visibility | Verified | Typed failure observations return to the next planner request |
-| Retries | Verified subset | Retryability, idempotency, and caps tested; exponential backoff/jitter is not implemented |
+| Retries | Verified subset | Retryability, idempotency, caps, exponential backoff, and stream-resume/fallback paths are tested; randomized jitter is not implemented |
 | Timeout/rate/auth/parse/empty/size faults | Verified offline | Runtime and Tavily injected-fault tests cover each class |
 | Capability fallback | Partially verified | Failures are observable so the LLM can choose another catalog tool; broad fallback behavior is not benchmarked |
 | Contradictory evidence | Designed | No conflict clustering/resolution implementation |
@@ -76,9 +76,9 @@ Status is based on repository evidence:
 | Citation invariants | Verified | Lineage, exact hashes/offsets, invalid IDs, unrelated sources, and URL provenance tested |
 | Generality demonstration | Verified offline | Two unrelated deterministic cases through the same path |
 | Structured observability | Verified prototype subset | Public trace events and parseable CLI output; no metrics dashboard/cost collector |
-| Default offline isolation | Verified | 100 pass; guarded live test is collected and skipped |
+| Default offline isolation | Verified | 116 pass; guarded paid/live test is collected and skipped |
 | LLM-as-a-judge / human calibration | Not implemented | Rubric and protocol only |
-| Measured research quality/cost/latency | Not implemented | No live credentials, benchmark execution, or calibrated results |
+| Measured research quality/cost/latency | Not implemented | Manual smoke counts exist, but no benchmark execution or calibrated results |
 
 ## Final checklist
 
@@ -89,9 +89,11 @@ Status is based on repository evidence:
 - [x] Final URLs and inline citations resolve from validated evidence IDs.
 - [x] No domain-specific query workflow or hidden chain-of-thought dependency exists.
 - [x] Two unrelated query categories traverse the same generic path offline.
-- [x] Authentic filtered prompt/tool history is preserved with limitations disclosed.
-- [x] Implemented, live-unverified, designed, and future work are separated.
-- [ ] Live OpenAI/Tavily vertical slice verified (credentials/opt-in absent).
+- [x] Authentic prompt/tool history across all five workspace sessions is preserved
+      with security/internal exclusions disclosed.
+- [x] Implemented, live-smoke-verified, designed, and future work are separated.
+- [x] A bounded live OpenAI/Tavily vertical slice produced stored evidence and
+      resolved citations.
 - [ ] Semantic citation entailment, contradiction handling, steering, persistence,
       full DAG execution, and the evaluation benchmark implemented.
 - [ ] Research-quality, latency, token-cost, and judge/human metrics measured.

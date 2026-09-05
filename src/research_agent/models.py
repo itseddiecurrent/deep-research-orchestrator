@@ -89,11 +89,11 @@ class TraceEventType(str, Enum):
 
 
 class RuntimeLimits(StrictModel):
-    max_iterations: int = Field(default=12, ge=1)
-    max_tool_calls: int = Field(default=8, ge=0)
+    max_iterations: int = Field(default=16, ge=1)
+    max_tool_calls: int = Field(default=12, ge=0)
     max_retries_per_tool: int = Field(default=1, ge=0)
     tool_timeout_seconds: float = Field(default=20.0, gt=0)
-    max_model_output_tokens: int = Field(default=2_000, ge=128)
+    max_model_output_tokens: int = Field(default=4_000, ge=128)
     max_tool_result_bytes: int = Field(default=2_000_000, ge=1_024)
 
 

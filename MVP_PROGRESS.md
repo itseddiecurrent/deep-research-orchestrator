@@ -111,13 +111,20 @@ Status: **Approved as the prototype direction; implementation remains milestone-
   - [x] Update SUBMISSION_AUDIT.md with only verified statuses
   - [x] Update AI_USAGE.md and refresh authentic Codex history export
   - [x] Run final repository, test, lineage, and disclosure audit
+- [x] Milestone 7 — Interactive frontend and live smoke run
+  - [x] Add a local, zero-build browser UI and `research-agent-web` entry point
+  - [x] Display the plan, safe decision summaries, tool arguments, sources, and result
+  - [x] Stream OpenAI Responses events and normalize the completed structured output
+  - [x] Wrap provider-incompatible root-union schemas without weakening runtime validation
+  - [x] Verify OpenAI authentication, live planning, Tavily search, and terminal output
+  - [x] Record the live evidence-extraction rejection without claiming citation success
 
 No implementation milestone is complete until its tests pass. Live-call success is
 reported separately from deterministic test success.
 
 ## 4. Current Repository State
 
-As of 2026-09-05 15:51 +08:00:
+As of 2026-09-05 17:35 +08:00:
 
 - Prototype package files now include `tools.py`, `llm.py`, `runtime.py`,
   `provenance.py`, and `synthesis.py` alongside `models.py`, `cli.py`, and
@@ -139,28 +146,44 @@ As of 2026-09-05 15:51 +08:00:
 - Structured synthesis accepts existing evidence IDs only; report claims/citations
   are built and validated atomically, then inline numbers and stored source URLs are
   rendered deterministically with repeated URLs deduplicated.
-- Tests are now in thirteen files under `tests/`; 100 deterministic offline tests pass
+- Tests are now in fourteen files under `tests/`; 116 deterministic offline tests pass
   and one explicitly marked live test is skipped by default.
-- Secret-safe environment loading, an injectable OpenAI Responses adapter, and a
-  bounded Tavily `search_web` adapter are implemented and deterministically tested;
-  neither live provider has been called.
+- Secret-safe environment loading, a streaming OpenAI Responses adapter, and a
+  bounded Tavily `search_web` adapter are implemented and deterministically tested.
+  A live smoke run authenticated with OpenAI, produced a plan, called Tavily once,
+  retrieved five sources, and reached a completed terminal state.
 - Optional runtime evidence/synthesis integration now ingests and extracts successful
   canonical tool output before replanning, exposes validated evidence to the next
   decision, and turns evidence-backed finish actions into cited reports.
 - The installed CLI composes the OpenAI/Tavily runtime, emits plain reports or one
   parseable `--trace` JSON document, and distinguishes useful partial output from
   terminal/configuration failures.
-- No semantic entailment verifier, integrated live CLI run, live demo, or measured
-  evaluation result exists yet.
+- The installed `research-agent-web` command serves a local prompt UI on
+  `127.0.0.1:8000` and renders the plan, safe decision summaries, tool calls and
+  arguments, provenance milestones, source links, and final report.
+- OpenAI streaming now performs bounded transport retries, resumes a stored response
+  from its last sequence number when supported, falls back to one fresh request when
+  live resume is rejected, and distinguishes provider failures from invalid plans.
+- GPT-5-family orchestration uses low reasoning effort and a 4,000-token response cap;
+  incomplete responses report their safe provider reason. Replanning context excludes
+  duplicated source bodies while retaining tool metadata, source identity/hashes, and
+  validated evidence.
+- Evidence extraction deterministically recovers exact snapshot text when a model
+  normalizes whitespace or quotes across adjacent chunks, and commits the valid
+  subset when another model candidate fails lineage validation.
+- A live one-call Nvidia check produced five sources, four validated evidence records,
+  and four citations. The exact five-firm semiconductor prompt produced a cited partial
+  report with eight calls, 41 sources, 21 evidence records, and ten citations before
+  reaching the former eight-call cap; defaults are now 12 calls/16 iterations.
 - `README.md`, `DESIGN.md`, `EVALUATION.md`, `SUBMISSION_AUDIT.md`, and `AI_USAGE.md`
-  now distinguish verified offline behavior, live-unverified adapters, design-only
-  capabilities, and future work.
+  now distinguish verified offline behavior, bounded live-smoke evidence,
+  design-only capabilities, and future work.
 - A local `main` Git repository now targets
   `https://github.com/itseddiecurrent/deep-research-orchestrator.git`; `.env` and
   credential variants are ignored and never included in repository history.
-- Live execution requires `OPENAI_API_KEY`, `TAVILY_API_KEY`, explicit test opt-in,
-  and outbound network access; both credentials and opt-in are absent in the current
-  environment.
+- Live execution requires `OPENAI_API_KEY`, `TAVILY_API_KEY`, and outbound network
+  access. Both credentials are now locally configured; the paid pytest remains
+  explicitly opt-in.
 - The filtered prompt-history export is refreshed at verified milestone boundaries;
   the final assistant handoff may be absent because it is emitted afterward.
 
@@ -427,34 +450,35 @@ Verified by:
 
 ## 6. Current Task
 
-### Submission handoff
+### Interactive frontend handoff
 
-Status: Complete — awaiting human review or optional credentialed live validation
+Status: Complete — browser UI implemented and smoke-tested
 
 Objective:
 
-- preserve this verified checkpoint and disclose any later live/benchmark results
-  separately from the deterministic prototype evidence.
+- provide a simple local browser surface for live prompts and make the agent's safe
+  reasoning trace, tool use, sources, and result easy to inspect.
 
 Files expected to be modified:
 
-- none unless human review requests changes or credentials are supplied for the
-  explicitly opt-in live smoke test.
+- `src/research_agent/web.py`, `src/research_agent/web_assets/`, `pyproject.toml`,
+  `README.md`, adapter tests, web tests, and this checkpoint.
 
 Expected behavior:
 
-- required implementation and documentation milestones remain verified;
-- live provider behavior, semantic entailment, and benchmark results remain explicitly
-  unverified rather than inferred from offline tests.
+- `research-agent-web` serves the UI locally and submits prompts to the same live
+  runtime used by the CLI;
+- decision summaries are visible while hidden chain-of-thought remains undisclosed;
+- the partial live citation result remains explicit rather than inferred as success.
 
 Tests that prove completion:
 
-- rerun only checks relevant to any later change; run the guarded live test only with
-  explicit opt-in and credentials.
+- full deterministic suite, HTTP asset/API tests, installed-entry-point smoke check,
+  and one bounded live CLI run.
 
 ## 7. Tests and Verification
 
-Current status: 100 deterministic offline tests pass and one live test skips by
+Current status: 116 deterministic offline tests pass and one live test skips by
 default across schemas, CLI, registry,
 scripted/OpenAI LLM clients, configuration, bounded runtime, Tavily normalization,
 provenance, evidence, citation integrity, synthesis rendering, failures, retries,
@@ -476,7 +500,7 @@ timeouts, response bounds, and trace behavior.
 | 12. Citation IDs resolve | Verified | Claims render only after every evidence/chunk/snapshot/result/call edge validates |
 | 13. Fabricated citation IDs rejected | Verified | Unknown evidence, unrelated source links, duplicate IDs, and free-form URLs fail |
 | 14. Two unrelated queries, same runtime | Verified offline | Technology and conflicting-science cases use the same generic path |
-| Real external tool | Adapter verified offline | Live test exists but skipped because opt-in/credentials are absent |
+| Real external tool | Live smoke verified | OpenAI planned and Tavily returned five sources in one completed run |
 | Hidden chain-of-thought independence | Schema verified | Trace exposes `decision_summary`; no reasoning field exists |
 
 Default tests must be deterministic, offline, and free of paid API calls. Live tests
@@ -484,8 +508,9 @@ must be opt-in and clearly labeled.
 
 ## 8. Known Issues / Risks
 
-- OpenAI and Tavily credentials are absent and live opt-in is false in the current
-  environment; provider availability and live behavior remain unverified.
+- A complete 12-call live run of the five-company semiconductor prompt has not been
+  repeated after raising the cap; the preceding eight-call run returned a useful
+  cited partial result but did not finish the requested earnings comparison.
 - External search results are nondeterministic and may change between demo runs.
 - Tavily cleaned raw content proves lineage to a tool result, not byte identity with
   the original publisher page.
@@ -505,13 +530,14 @@ must be opt-in and clearly labeled.
 
 ## 9. Remaining Work
 
-No required prototype milestone remains. Optional future work is credentialed live
-validation, semantic verification, steering/persistence/DAG execution, and the full
-evaluation benchmark described in `DESIGN.md` and `EVALUATION.md`.
+No required prototype or frontend milestone remains. Optional future work is a repair
+pass for rejected live evidence, semantic verification, live trace streaming to the
+browser, steering/persistence/DAG execution, and the full evaluation benchmark
+described in `DESIGN.md` and `EVALUATION.md`.
 
 ## 10. Last Verified Checkpoint
 
-Last verified: 2026-09-05 15:53:44 +08:00
+Last verified: 2026-09-05 17:35 +08:00
 
 - Repository inventory: reconciled written deliverables and verified Milestones 1–6
   package, adapters, CLI, tests, and filtered history export.
@@ -519,18 +545,22 @@ Last verified: 2026-09-05 15:53:44 +08:00
   Milestone 6 implementation commit `98b1832` plus its publication record; only the
   pre-existing untracked `reconnect-prompt.txt` remains intentionally untouched.
 - Python compilation: passed for `src` and `tests`.
-- Prototype unit tests: 100 passed and one guarded live test skipped with warnings
+- Prototype unit tests: 116 passed and one guarded live test skipped with warnings
   treated as errors; dependency, compilation, and whitespace checks passed.
-- Integration/demo runs: two unrelated deterministic end-to-end cases passed; live
-  provider execution was not run because opt-in and credentials are absent.
+- Integration/demo runs: the exact browser prompt reached cited synthesis with eight
+  calls, 41 sources, 21 evidence records, and ten citations; a separate one-call live
+  check verified four evidence records and four citations with zero extraction
+  failures. The exact run ended partial at the former eight-call cap, which is now 12.
 - Working behavior: scripted structured planning, dynamic validated tool execution,
   bounded observation loop, integrated provenance ingestion/evidence validation,
   evidence-aware replanning, ID-constrained synthesis, deterministic inline citations,
-  retries/failures/limits, provider adapters, live-capable CLI, and trace work; live
-  verification and semantic entailment do not yet; unrelated-query behavior is
-  demonstrated deterministically through the same generic path.
-- Prompt history: filtered authentic export was refreshed from all three actual local
-  project rollouts; the final assistant handoff may be absent until a later refresh.
+  retries/failures/limits, provider adapters, live-capable CLI/browser UI, and trace
+  work; semantic entailment does not yet. Unrelated-query behavior is demonstrated
+  deterministically through the same generic path, and the provider vertical slice
+  is verified by bounded manual smoke runs.
+- Prompt history: the filtered authentic export was refreshed from all five local
+  project rollouts through the refresh point; the final assistant handoff may be
+  absent until a later refresh.
 - Commands used: `python -m compileall -q src tests`, `pytest -q -W error`,
   `python -m pip check`, and `git diff --check`.
 

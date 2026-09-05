@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from hashlib import sha256
+import re
 from typing import Any, Iterable, Optional, Sequence, TypeVar
 
 from pydantic import Field, HttpUrl, ValidationError, field_validator, model_validator
@@ -360,8 +361,27 @@ class LineageValidator:
             if evidence.verbatim_excerpt in chunks[chunk_id].text:
                 excerpt_found = True
         if not excerpt_found:
+            cited_chunk_ids = set(evidence.source_chunk_ids)
+            for snapshot in _unique_records(snapshots):
+                start = snapshot.content.find(evidence.verbatim_excerpt)
+                while start >= 0:
+                    end = start + len(evidence.verbatim_excerpt)
+                    overlapping_ids = {
+                        chunk.id
+                        for chunk in chunks.values()
+                        if chunk.source_snapshot_id == snapshot.id
+                        and chunk.start_offset < end
+                        and chunk.end_offset > start
+                    }
+                    if overlapping_ids and overlapping_ids.issubset(cited_chunk_ids):
+                        excerpt_found = True
+                        break
+                    start = snapshot.content.find(evidence.verbatim_excerpt, start + 1)
+                if excerpt_found:
+                    break
+        if not excerpt_found:
             raise LineageValidationError(
-                f"evidence {evidence.id!r} excerpt is not contained in a cited chunk"
+                f"evidence {evidence.id!r} excerpt is not contained in its cited chunks"
             )
         return _unique_records(snapshots)
 
@@ -526,6 +546,7 @@ class EvidenceExtractor:
             raise EvidenceValidationError(f"invalid evidence response: {exc}") from exc
 
         allowed_chunks = set(source_chunk_ids)
+        canonical_candidates: list[EvidenceCandidate] = []
         for candidate in batch.evidence:
             if candidate.task_id != task_id:
                 raise EvidenceValidationError(
@@ -535,7 +556,34 @@ class EvidenceExtractor:
                 raise EvidenceValidationError(
                     "evidence response references a chunk not supplied to extraction"
                 )
-        return self.provenance.create_evidence(session, batch.evidence)
+            exact_excerpt, exact_chunk_ids = _recover_exact_excerpt(
+                candidate, session, chunk_index
+            )
+            if not set(exact_chunk_ids).issubset(allowed_chunks):
+                raise EvidenceValidationError(
+                    "recovered evidence crosses a chunk not supplied to extraction"
+                )
+            canonical_candidates.append(
+                candidate.model_copy(
+                    update={
+                        "verbatim_excerpt": exact_excerpt,
+                        "source_chunk_ids": exact_chunk_ids,
+                    }
+                )
+            )
+        accepted_candidates: list[EvidenceCandidate] = []
+        for candidate in canonical_candidates:
+            validation_session = session.model_copy(deep=True)
+            try:
+                self.provenance.create_evidence(validation_session, [candidate])
+            except ProvenanceError:
+                continue
+            accepted_candidates.append(candidate)
+        if not accepted_candidates:
+            raise EvidenceValidationError(
+                "no evidence candidate passed exact excerpt and lineage validation"
+            )
+        return self.provenance.create_evidence(session, accepted_candidates)
 
 
 def _unique_records(records: Sequence[RecordT]) -> list[RecordT]:
@@ -547,3 +595,57 @@ def _unique_records(records: Sequence[RecordT]) -> list[RecordT]:
             unique.append(record)
             seen.add(record_id)
     return unique
+
+
+def _recover_exact_excerpt(
+    candidate: EvidenceCandidate,
+    session: ResearchSession,
+    chunks: dict[str, SourceChunk],
+) -> tuple[str, list[str]]:
+    """Map whitespace-normalized model text back to an exact cited substring."""
+
+    excerpt = candidate.verbatim_excerpt
+    cited_chunks = [chunks[chunk_id] for chunk_id in candidate.source_chunk_ids]
+    for chunk in cited_chunks:
+        if excerpt in chunk.text:
+            return excerpt, candidate.source_chunk_ids
+
+    trimmed = excerpt.strip().strip('"“”')
+    words = trimmed.split()
+    if not words:
+        return excerpt, candidate.source_chunk_ids
+    whitespace_flexible = re.compile(r"\s+".join(re.escape(word) for word in words))
+    cited_snapshot_ids = {chunk.source_snapshot_id for chunk in cited_chunks}
+    for snapshot in session.source_snapshots:
+        if snapshot.id not in cited_snapshot_ids:
+            continue
+        exact_start = snapshot.content.find(trimmed)
+        if exact_start >= 0:
+            match_start = exact_start
+            match_end = exact_start + len(trimmed)
+            exact_match = snapshot.content[match_start:match_end]
+        else:
+            match = whitespace_flexible.search(snapshot.content)
+            if match is None:
+                continue
+            match_start = match.start()
+            match_end = match.end()
+            exact_match = match.group(0)
+        overlapping = sorted(
+            (
+                chunk
+                for chunk in session.source_chunks
+                if chunk.source_snapshot_id == snapshot.id
+                and chunk.start_offset < match_end
+                and chunk.end_offset > match_start
+            ),
+            key=lambda chunk: chunk.start_offset,
+        )
+        if overlapping:
+            return exact_match, [chunk.id for chunk in overlapping]
+
+    for chunk in cited_chunks:
+        match = whitespace_flexible.search(chunk.text)
+        if match is not None:
+            return match.group(0), candidate.source_chunk_ids
+    return excerpt, candidate.source_chunk_ids

@@ -22,10 +22,10 @@ citations, or termination.
 
 This is a plan, not a report of research-quality results. Thresholds below are
 proposed initial release gates and must be calibrated against the first human-labeled
-baseline. The repository now has 100 passing deterministic prototype tests plus one
-default-skipped live smoke test; those tests verify runtime behavior and lineage, not
-the benchmark scores, human calibration, latency, cost, or answer quality proposed
-here.
+baseline. The repository now has 116 passing deterministic prototype tests plus one
+default-skipped, opt-in live test. Separate manual provider smoke runs have succeeded,
+but neither they nor the deterministic suite measure the benchmark scores, human
+calibration, latency, cost, or answer quality proposed here.
 
 ## 2. Evaluation environments
 
@@ -63,9 +63,11 @@ Because facts and rankings change, these cases use requirement-based and citatio
 entailment scoring rather than frozen exact answers. Live results are trended and do
 not fail a commit unless the failure is a deterministic safety invariant.
 
-The current prototype contains one guarded vertical-slice smoke test as a precursor
-to this suite. It has not run because live opt-in and credentials are absent; it is not
-a canary result.
+The current prototype contains one guarded vertical-slice test as a precursor to this
+suite. Manual bounded runs have exercised the live OpenAI/Tavily path, including a
+one-call result with stored evidence and resolved citations. The guarded test remains
+excluded from the default suite, and the manual runs are connectivity/vertical-slice
+evidence—not a canary benchmark result.
 
 ## 3. Benchmark record and annotations
 

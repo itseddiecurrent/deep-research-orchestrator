@@ -1,8 +1,9 @@
 # Conversation log export
 
-`codex-session-export.jsonl` is a filtered export of the actual local Codex session
-used for this assignment. It was not manually reconstructed, shortened for style, or
-rewritten to hide the prototype-first mistake and subsequent course correction.
+`codex-session-export.jsonl` is a filtered export of all five actual local Codex
+sessions whose recorded working directory is this repository. It was not manually
+reconstructed, shortened for style, or rewritten to hide the prototype-first mistake,
+subsequent course correction, interrupted-session recovery, or live debugging.
 
 Each line is a JSON event. The export retains `response_item` records when they are:
 
@@ -15,6 +16,12 @@ token/rate-limit telemetry, and other session-internal metadata. This protects p
 reasoning and environment instructions while retaining the reviewable collaboration
 record. `jq -c` normalizes JSON whitespace/key rendering but does not paraphrase event
 values.
+
+Completeness is checked before replacement by comparing the count of retained events
+in every matching source session with the merged export, validating every JSON line,
+and scanning for configured credentials and common token formats. Events are kept in
+session chronology. The active session is exported through the refresh point; as with
+any live transcript, the final handoff emitted afterward cannot be present yet.
 
 The filter used was:
 
@@ -31,8 +38,8 @@ select(.type == "response_item")
 Limitations:
 
 - This is a safe review export, not the raw internal session database.
-- The final assistant message may be absent if it had not been persisted when the
-  export was refreshed.
+- The final assistant message and any events after the refresh point are necessarily
+  absent until a later refresh.
 - Internal chain-of-thought is intentionally unavailable. Concise reasoning summaries
   communicated to the user remain in assistant messages.
 - Local source paths and tool output may reveal development-environment structure;

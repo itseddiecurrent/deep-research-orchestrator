@@ -674,26 +674,31 @@ objective/evidence contracts.
 
 ## 18. Prototype scope and implementation boundary
 
-After the design/evaluation review, a small in-memory CLI prototype was implemented.
+After the design/evaluation review, a small in-memory CLI and local browser prototype
+was implemented.
 It includes:
 
-- CLI or minimal API accepting a natural-language query;
+- CLI and local HTTP/browser UI accepting a natural-language query;
 - one provider-neutral LLM planner interface with validated `AgentAction` output;
 - a dynamic `ToolRegistry` with one real read-only web search/fetch capability;
 - bounded planner → tool → observation iterations;
 - `ToolCall → SourceSnapshot → SourceChunk → Evidence → ReportClaim` lineage;
-- cited synthesis, a basic lineage verifier, structured trace output, and focused
+- cited synthesis, a basic lineage verifier, structured trace output, a safe
+  human-readable UI trace, and focused
   tests for unknown tools, bad schemas, limits, retries, and citation resolution.
 
-The OpenAI Responses and Tavily adapters are implemented but verified only with
-injected offline clients because live credentials were unavailable. The prototype
-also demonstrates two unrelated query categories through the same generic runtime.
+The OpenAI Responses and Tavily adapters are verified with injected offline clients.
+Manual bounded live smoke runs also exercised planning, Tavily retrieval, evidence
+extraction, and cited partial synthesis. Those runs establish connectivity and a
+working vertical slice, not calibrated research quality, latency, cost, or
+availability. Two unrelated deterministic query categories also traverse the same
+generic runtime.
 
 The prototype does **not** implement full streaming steering, objective-version
 reconciliation, durable scheduling, task-DAG execution, broad MCP support, robust
 PDF/browser parsing, coverage evaluation, contradiction handling, semantic citation
 entailment, production security, or the full benchmark. Exact lineage and excerpt
-containment are verified; research quality and live behavior are not.
+containment are verified; research quality remains unmeasured.
 
 ## 19. Evaluation strategy summary
 

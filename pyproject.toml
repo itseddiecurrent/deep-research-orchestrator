@@ -22,6 +22,7 @@ dev = [
 
 [project.scripts]
 research-agent = "research_agent.cli:main"
+research-agent-web = "research_agent.web:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -31,3 +32,6 @@ markers = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+research_agent = ["web_assets/*.html", "web_assets/*.js", "web_assets/*.css"]

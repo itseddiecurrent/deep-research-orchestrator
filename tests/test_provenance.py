@@ -349,3 +349,135 @@ def test_extractor_rejects_unsupplied_chunk_and_reported_token_overflow() -> Non
                 session, task_id="task_sources", source_chunk_ids=[first.id]
             )
         )
+
+
+def test_extractor_recovers_source_exact_whitespace_from_model_excerpt() -> None:
+    source_text = "Revenue grew  \n\t10% this quarter despite constraints."
+    session = make_session(
+        raw_output={
+            "sources": [
+                {
+                    "source_url": "https://example.test/earnings",
+                    "title": "Earnings transcript",
+                    "content": source_text,
+                }
+            ]
+        }
+    )
+    manager = ingest_default(session, chunk_size=200)
+    chunk = session.source_chunks[0]
+    client = ScriptedLLMClient(
+        [
+            {
+                "evidence": [
+                    {
+                        "task_id": "task_sources",
+                        "claim": "Revenue grew ten percent.",
+                        "source_chunk_ids": [chunk.id],
+                        "verbatim_excerpt": (
+                            '"Revenue grew 10% this quarter despite constraints."'
+                        ),
+                        "confidence": 0.9,
+                    }
+                ]
+            }
+        ]
+    )
+
+    created = asyncio.run(
+        EvidenceExtractor(llm_client=client, provenance=manager).extract(
+            session,
+            task_id="task_sources",
+            source_chunk_ids=[chunk.id],
+        )
+    )
+
+    assert created[0].verbatim_excerpt == source_text
+    assert created[0].verbatim_excerpt in chunk.text
+
+
+def test_extractor_recovers_exact_excerpt_across_adjacent_chunks() -> None:
+    excerpt = "Revenue grew ten percent despite constrained component supply."
+    source_text = f"Short prefix. {excerpt} Short suffix."
+    session = make_session(
+        raw_output={
+            "sources": [
+                {
+                    "source_url": "https://example.test/cross-chunk",
+                    "title": "Cross-chunk transcript",
+                    "content": source_text,
+                }
+            ]
+        }
+    )
+    manager = ingest_default(session, chunk_size=32)
+    first_relevant_chunk = next(
+        chunk for chunk in session.source_chunks if "Revenue grew" in chunk.text
+    )
+    client = ScriptedLLMClient(
+        [
+            {
+                "evidence": [
+                    {
+                        "task_id": "task_sources",
+                        "claim": "Revenue grew despite supply constraints.",
+                        "source_chunk_ids": [first_relevant_chunk.id],
+                        "verbatim_excerpt": excerpt,
+                        "confidence": 0.9,
+                    }
+                ]
+            }
+        ]
+    )
+
+    created = asyncio.run(
+        EvidenceExtractor(llm_client=client, provenance=manager).extract(
+            session,
+            task_id="task_sources",
+            source_chunk_ids=[chunk.id for chunk in session.source_chunks],
+        )
+    )
+
+    assert created[0].verbatim_excerpt == excerpt
+    assert len(created[0].source_chunk_ids) > 1
+    LineageValidator().resolve_evidence(session, created[0].id)
+
+
+def test_extractor_commits_valid_subset_when_another_candidate_is_invalid() -> None:
+    session = make_session()
+    manager = ingest_default(session, chunk_size=200)
+    chunk = session.source_chunks[0]
+    client = ScriptedLLMClient(
+        [
+            {
+                "evidence": [
+                    {
+                        "task_id": "task_sources",
+                        "claim": "The source supports this claim.",
+                        "source_chunk_ids": [chunk.id],
+                        "verbatim_excerpt": chunk.text,
+                        "confidence": 0.9,
+                    },
+                    {
+                        "task_id": "task_sources",
+                        "claim": "This candidate is not source-exact.",
+                        "source_chunk_ids": [chunk.id],
+                        "verbatim_excerpt": "words that do not occur in the source",
+                        "confidence": 0.4,
+                    },
+                ]
+            }
+        ]
+    )
+
+    created = asyncio.run(
+        EvidenceExtractor(llm_client=client, provenance=manager).extract(
+            session,
+            task_id="task_sources",
+            source_chunk_ids=[chunk.id],
+        )
+    )
+
+    assert len(created) == 1
+    assert created[0].claim == "The source supports this claim."
+    assert session.evidence == created
