@@ -4,8 +4,9 @@
 
 OpenAI Codex was used as a collaborative coding and writing assistant in this
 workspace. It inspected the repository, read the project specification, drafted and
-reviewed architecture/evaluation documents, managed a local conversation-history
-export, and checked repository deliverables.
+reviewed architecture/evaluation documents, implemented and tested the prototype,
+recovered an interrupted session from repository state, managed a local conversation-
+history export, and checked submission deliverables.
 
 No separate AI-generated conversation transcript was created. The authentic filtered
 Codex session export is in [`logs/codex-session-export.jsonl`](logs/codex-session-export.jsonl),
@@ -19,6 +20,12 @@ with its format and exclusions documented in [`logs/README.md`](logs/README.md).
 - Turn the evaluation requirements into measurable benchmark records, metrics,
   failure schedules, judge rubrics, invariants, and regression gates.
 - Create and edit repository documentation.
+- Implement strict models, the dynamic registry, bounded runtime, provider adapters,
+  provenance/evidence extraction, cited synthesis, CLI composition, and tests.
+- Diagnose failures from deterministic tests, preserve interrupted uncommitted work,
+  and update the incremental checkpoint after verified slices.
+- Check current official OpenAI Responses/Structured Outputs and Tavily Search
+  interfaces before finalizing external adapters.
 - Inspect the local Codex history mechanism and export a reviewable subset without
   manually rewriting messages.
 
@@ -47,17 +54,20 @@ has not been edited out.
 - A polished, manually reconstructed prompt history was not created because it would
   not be an authentic log.
 - Significant prototype work was deferred until after the design and evaluation
-  audit, in accordance with the human's priority order.
+  audit, then resumed as a deliberately small sequential CLI implementation.
 - Domain routers, fixed example-query pipelines, unbounded agents, and free-form
   citations were excluded by design.
+- Live calls and demo artifacts were not produced because credentials were absent and
+  the explicit live-test opt-in was false.
 
 ## Human review still required
 
-The documents reflect assistant-generated analysis and should receive normal human
-review. In particular, proposed evaluation thresholds need calibration against an
-initial labeled baseline; security and retention policies need organization-specific
-approval; and any future prototype needs implementation and test evidence before it
-is described as working.
+The documents and prototype reflect assistant-generated analysis/code and should
+receive normal human review. The deterministic suite verifies control flow and
+lineage, not research quality. Proposed evaluation thresholds still need calibration;
+security/retention policies need organization-specific approval; and live provider,
+semantic entailment, steering, persistence, and full benchmark claims remain
+unverified or unimplemented as disclosed in `SUBMISSION_AUDIT.md`.
 
 ## Log-export limitations
 

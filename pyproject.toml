@@ -9,7 +9,10 @@ description = "A small, generic LLM research-agent architecture prototype"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
+  "httpx>=0.28,<1",
+  "openai>=2.48,<3",
   "pydantic>=2.8,<3",
+  "python-dotenv>=1.1,<2",
 ]
 
 [project.optional-dependencies]
@@ -22,6 +25,9 @@ research-agent = "research_agent.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+  "live: opt-in tests that may make paid external API calls",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

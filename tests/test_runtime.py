@@ -6,7 +6,7 @@ from typing import Any, Deque
 
 import pytest
 
-from research_agent.llm import LLMResponse, ScriptedLLMClient
+from research_agent.llm import LLMRequest, LLMResponse, ScriptedLLMClient
 from research_agent.models import (
     ObjectiveRequirement,
     ResearchObjective,
@@ -19,6 +19,8 @@ from research_agent.models import (
     TraceEventType,
 )
 from research_agent.runtime import AgentRuntime
+from research_agent.provenance import EvidenceExtractor, ResearchToolOutput
+from research_agent.synthesis import SynthesisService
 from research_agent.tools import ToolDefinition, ToolExecutionError, ToolRegistry
 
 
@@ -69,6 +71,71 @@ class SlowTool(ScriptedTool):
         self.calls.append(arguments)
         await asyncio.sleep(0.03)
         return {"text": "late"}
+
+
+class ResearchSourceTool(ScriptedTool):
+    output_model = ResearchToolOutput
+
+
+class PipelineLLMClient:
+    def __init__(
+        self,
+        query: str,
+        *,
+        partial_finish: bool = False,
+        invalid_evidence: bool = False,
+        invalid_synthesis: bool = False,
+    ) -> None:
+        self.query = query
+        self.partial_finish = partial_finish
+        self.invalid_evidence = invalid_evidence
+        self.invalid_synthesis = invalid_synthesis
+        self.requests: list[LLMRequest] = []
+        self.action_count = 0
+
+    async def complete(self, request: LLMRequest) -> LLMResponse:
+        self.requests.append(request.model_copy(deep=True))
+        if request.purpose == "plan":
+            output: object = make_plan(self.query)
+        elif request.purpose == "action":
+            self.action_count += 1
+            if self.action_count == 1:
+                output = tool_action("search_web")
+            else:
+                output = finish(partial=self.partial_finish)
+        elif request.purpose == "evidence":
+            chunk = request.context["source_chunks"][0]
+            output = {
+                "evidence": [
+                    {
+                        "task_id": "task_lookup",
+                        "claim": "The source supports the researched fact.",
+                        "source_chunk_ids": [
+                            "chunk_invented" if self.invalid_evidence else chunk["id"]
+                        ],
+                        "verbatim_excerpt": "Source-backed fact.",
+                        "confidence": 0.9,
+                    }
+                ]
+            }
+        else:
+            assert request.purpose == "synthesis"
+            evidence_id = request.context["evidence"][0]["evidence"]["id"]
+            output = (
+                {"invalid": True}
+                if self.invalid_synthesis
+                else {
+                    "title": "Cited research",
+                    "claims": [
+                        {
+                            "text": "The researched fact is supported.",
+                            "evidence_ids": [evidence_id],
+                        }
+                    ],
+                    "limitations": [],
+                }
+            )
+        return LLMResponse(output=output, provider="scripted", model="scripted-v1")
 
 
 def make_plan(query: str) -> ResearchPlan:
@@ -434,3 +501,152 @@ def test_trace_contains_required_lifecycle_events_without_reasoning_field() -> N
     ]
     assert all(event.session_id == session.id for event in session.trace)
     assert all("reasoning" not in event.model_dump() for event in session.trace)
+
+
+def make_pipeline_runtime(
+    query: str, client: PipelineLLMClient
+) -> tuple[AgentRuntime, ResearchSourceTool]:
+    registry = ToolRegistry()
+    tool = ResearchSourceTool(
+        "search_web",
+        [
+            {
+                "sources": [
+                    {
+                        "source_url": "https://example.test/research",
+                        "title": "Research source",
+                        "content": "Source-backed fact.",
+                    }
+                ]
+            }
+        ],
+    )
+    registry.register(tool)
+    extractor = EvidenceExtractor(llm_client=client)
+    return (
+        AgentRuntime(
+            llm_client=client,
+            tool_registry=registry,
+            evidence_extractor=extractor,
+            synthesis_service=SynthesisService(llm_client=client),
+        ),
+        tool,
+    )
+
+
+def test_integrated_runtime_extracts_evidence_before_planning_and_synthesizes() -> None:
+    query = "Research an unseen evidence-backed topic"
+    client = PipelineLLMClient(query)
+    runtime, tool = make_pipeline_runtime(query, client)
+
+    session = asyncio.run(runtime.run(query))
+
+    assert len(tool.calls) == 1
+    assert [request.purpose for request in client.requests] == [
+        "plan",
+        "action",
+        "evidence",
+        "action",
+        "synthesis",
+    ]
+    second_action = client.requests[3]
+    assert second_action.context["evidence"] == [
+        session.evidence[0].model_dump(mode="json")
+    ]
+    assert session.status == SessionStatus.COMPLETED
+    assert "The researched fact is supported. [1]" in session.completion_summary
+    assert "https://example.test/research" in session.completion_summary
+    assert session.source_snapshots and session.source_chunks and session.evidence
+    assert session.report_claims and session.citations
+
+
+def test_evidence_processing_failure_is_a_safe_planner_observation() -> None:
+    query = "Research a source whose extraction fails"
+    client = PipelineLLMClient(query, partial_finish=True, invalid_evidence=True)
+    registry = ToolRegistry()
+    tool = ResearchSourceTool(
+        "search_web",
+        [
+            {
+                "sources": [
+                    {
+                        "source_url": "https://example.test/research",
+                        "title": "Research source",
+                        "content": "Source-backed fact.",
+                    }
+                ]
+            }
+        ],
+    )
+    registry.register(tool)
+    runtime = AgentRuntime(
+        llm_client=client,
+        tool_registry=registry,
+        evidence_extractor=EvidenceExtractor(llm_client=client),
+    )
+
+    session = asyncio.run(runtime.run(query))
+
+    assert session.tool_calls[0].status == ToolCallStatus.SUCCEEDED
+    assert session.evidence == []
+    assert session.observations[-1].success is False
+    assert session.observations[-1].summary == (
+        "evidence_processing_failed: EvidenceValidationError"
+    )
+    assert client.requests[3].context["observations"][-1]["success"] is False
+    assert any(
+        event.event_type == TraceEventType.EVIDENCE_FAILED
+        for event in session.trace
+    )
+    assert session.status == SessionStatus.PARTIAL
+
+
+def test_integrated_synthesis_preserves_planner_declared_partial_status() -> None:
+    query = "Research a topic with one unresolved gap"
+    client = PipelineLLMClient(query, partial_finish=True)
+    runtime, _ = make_pipeline_runtime(query, client)
+
+    session = asyncio.run(runtime.run(query))
+
+    assert session.status == SessionStatus.PARTIAL
+    assert session.unresolved_questions == ["One gap remains"]
+    assert "## Limitations" in session.completion_summary
+    assert "One gap remains" in session.completion_summary
+
+
+def test_integrated_synthesis_failure_terminates_without_unvalidated_report() -> None:
+    query = "Research a topic whose synthesis fails"
+    client = PipelineLLMClient(query, invalid_synthesis=True)
+    runtime, _ = make_pipeline_runtime(query, client)
+
+    session = asyncio.run(runtime.run(query))
+
+    assert session.status == SessionStatus.FAILED
+    assert session.report_claims == []
+    assert session.citations == []
+    assert session.trace[-1].event_type == TraceEventType.SESSION_FAILED
+    assert session.trace[-1].data["error_type"] == "synthesis_failed"
+
+
+def test_limit_after_evidence_returns_a_cited_partial_report() -> None:
+    query = "Research a topic within one action iteration"
+    client = PipelineLLMClient(query)
+    runtime, _ = make_pipeline_runtime(query, client)
+
+    session = asyncio.run(
+        runtime.run(query, limits=RuntimeLimits(max_iterations=1))
+    )
+
+    assert [request.purpose for request in client.requests] == [
+        "plan",
+        "action",
+        "evidence",
+        "synthesis",
+    ]
+    assert session.status == SessionStatus.PARTIAL
+    assert session.report_claims and session.citations
+    assert "The researched fact is supported. [1]" in session.completion_summary
+    assert "max_iterations" in session.unresolved_questions[0]
+    assert any(
+        event.event_type == TraceEventType.LIMIT_REACHED for event in session.trace
+    )

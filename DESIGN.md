@@ -674,11 +674,8 @@ objective/evidence contracts.
 
 ## 18. Prototype scope and implementation boundary
 
-At the time this design is written, **no prototype is implemented**. The previous
-prototype-first scaffold was deliberately removed after the assignment was clarified.
-The required design and evaluation artifacts take priority.
-
-If implemented after document review, the smallest honest prototype will include:
+After the design/evaluation review, a small in-memory CLI prototype was implemented.
+It includes:
 
 - CLI or minimal API accepting a natural-language query;
 - one provider-neutral LLM planner interface with validated `AgentAction` output;
@@ -688,9 +685,15 @@ If implemented after document review, the smallest honest prototype will include
 - cited synthesis, a basic lineage verifier, structured trace output, and focused
   tests for unknown tools, bad schemas, limits, retries, and citation resolution.
 
-It will not claim full streaming steering, durable distributed scheduling, broad MCP
-support, robust PDF/browser parsing, production security, or validated research
-quality until those features exist and are evaluated.
+The OpenAI Responses and Tavily adapters are implemented but verified only with
+injected offline clients because live credentials were unavailable. The prototype
+also demonstrates two unrelated query categories through the same generic runtime.
+
+The prototype does **not** implement full streaming steering, objective-version
+reconciliation, durable scheduling, task-DAG execution, broad MCP support, robust
+PDF/browser parsing, coverage evaluation, contradiction handling, semantic citation
+entailment, production security, or the full benchmark. Exact lineage and excerpt
+containment are verified; research quality and live behavior are not.
 
 ## 19. Evaluation strategy summary
 

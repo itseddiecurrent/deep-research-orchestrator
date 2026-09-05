@@ -247,7 +247,12 @@ class SynthesisService:
         self.llm_client = llm_client
         self.renderer = renderer or CitationRenderer()
 
-    async def synthesize(self, session: ResearchSession) -> RenderedReport:
+    async def synthesize(
+        self,
+        session: ResearchSession,
+        *,
+        force_partial: bool = False,
+    ) -> RenderedReport:
         if session.plan is None:
             raise SynthesisError("synthesis requires an active research plan")
         if not session.evidence:
@@ -276,12 +281,18 @@ class SynthesisService:
             instructions=(
                 "Draft material claims using only supplied evidence IDs. Do not emit "
                 "URLs or citation numbers; the deterministic renderer supplies them. "
+                "Preserve any planner-declared unresolved questions as limitations. "
                 "Return only the structured schema."
             ),
             context={
                 "original_query": session.original_query,
                 "objective": session.plan.objective.model_dump(mode="json"),
                 "evidence": evidence_context,
+                "planner_finish": {
+                    "completion_summary": session.completion_summary,
+                    "unresolved_questions": session.unresolved_questions,
+                    "is_partial": force_partial,
+                },
             },
             response_schema=SynthesisDraft.model_json_schema(),
             max_output_tokens=session.limits.max_model_output_tokens,
@@ -309,6 +320,12 @@ class SynthesisService:
                     f"synthesis referenced unknown evidence IDs: {sorted(unknown)}"
                 )
 
+        limitations = list(
+            dict.fromkeys([*session.unresolved_questions, *draft.limitations])
+        )
+        if force_partial and not limitations:
+            limitations.append("Research was declared partial before synthesis.")
+
         report_claims = [
             ReportClaim(
                 text=claim.text,
@@ -326,15 +343,15 @@ class SynthesisService:
         rendered = self.renderer.render(
             candidate_session,
             title=draft.title,
-            limitations=draft.limitations,
+            limitations=limitations,
         )
 
         session.report_claims = candidate_session.report_claims
         session.citations = candidate_session.citations
         session.completion_summary = rendered.markdown
-        session.unresolved_questions = list(draft.limitations)
+        session.unresolved_questions = limitations
         session.status = (
-            SessionStatus.PARTIAL if draft.limitations else SessionStatus.COMPLETED
+            SessionStatus.PARTIAL if limitations else SessionStatus.COMPLETED
         )
         for citation in session.citations:
             emit_trace(
@@ -350,7 +367,7 @@ class SynthesisService:
             session,
             (
                 TraceEventType.SESSION_PARTIAL
-                if draft.limitations
+                if limitations
                 else TraceEventType.SESSION_COMPLETED
             ),
             decision_summary="Rendered a lineage-validated cited report",

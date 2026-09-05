@@ -78,6 +78,7 @@ class TraceEventType(str, Enum):
     TOOL_FAILED = "tool_failed"
     SOURCE_CREATED = "source_created"
     EVIDENCE_CREATED = "evidence_created"
+    EVIDENCE_FAILED = "evidence_failed"
     EVALUATION_COMPLETED = "evaluation_completed"
     SYNTHESIS_STARTED = "synthesis_started"
     CITATION_VALIDATED = "citation_validated"

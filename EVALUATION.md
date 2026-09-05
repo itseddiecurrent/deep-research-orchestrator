@@ -20,8 +20,12 @@ sampled human adjudication, and repeated runs. Metrics are reported separately b
 case class and difficulty so a high aggregate cannot conceal a failure on steering,
 citations, or termination.
 
-This is a plan, not a report of results. Thresholds below are proposed initial release
-gates and must be calibrated against the first human-labeled baseline.
+This is a plan, not a report of research-quality results. Thresholds below are
+proposed initial release gates and must be calibrated against the first human-labeled
+baseline. The repository now has 100 passing deterministic prototype tests plus one
+default-skipped live smoke test; those tests verify runtime behavior and lineage, not
+the benchmark scores, human calibration, latency, cost, or answer quality proposed
+here.
 
 ## 2. Evaluation environments
 
@@ -58,6 +62,10 @@ A smaller non-blocking suite tests real search/fetch behavior and source diversi
 Because facts and rankings change, these cases use requirement-based and citation
 entailment scoring rather than frozen exact answers. Live results are trended and do
 not fail a commit unless the failure is a deterministic safety invariant.
+
+The current prototype contains one guarded vertical-slice smoke test as a precursor
+to this suite. It has not run because live opt-in and credentials are absent; it is not
+a canary result.
 
 ## 3. Benchmark record and annotations
 

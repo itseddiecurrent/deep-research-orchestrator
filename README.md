@@ -1,97 +1,111 @@
 # General-Purpose LLM Research Agent
 
-This repository is a system-design take-home submission for a generic LLM-powered
-research agent. The proposed system lets an LLM dynamically plan research and choose
-from registered tools while a deterministic runtime owns safe execution, state,
-budgets, provenance, and observability.
-
-The required written deliverables take priority over prototype breadth.
+This repository combines a system-design submission with a deliberately small,
+runnable research-agent prototype. An LLM creates a structured research plan and
+selects dynamically advertised tools; deterministic code validates and executes those
+actions, enforces limits, records provenance, and renders citations.
 
 ## Submission map
 
-- [`DESIGN.md`](DESIGN.md) — architecture, interaction/steering, dynamic planning and
-  tools, context-drift prevention, citation lineage, reliability, and trade-offs.
-- [`EVALUATION.md`](EVALUATION.md) — benchmark design, concrete metrics, citation
-  evaluation, failure injection, repeated-run policy, and regression gates.
-- [`AI_USAGE.md`](AI_USAGE.md) — assistant usage, human decisions/corrections, and log
-  limitations.
-- [`SUBMISSION_AUDIT.md`](SUBMISSION_AUDIT.md) — requirement-by-requirement final
-  audit with implemented/designed/not-implemented status.
-- [`logs/codex-session-export.jsonl`](logs/codex-session-export.jsonl) — authentic,
-  filtered Codex conversation/tool history; see [`logs/README.md`](logs/README.md).
-- [`research-agent-init.md`](research-agent-init.md) — authoritative assignment
-  specification.
+- [`DESIGN.md`](DESIGN.md) — intended architecture, steering, dynamic tools, context
+  control, provenance, reliability, trade-offs, and prototype boundary.
+- [`EVALUATION.md`](EVALUATION.md) — proposed benchmark, metrics, failure injection,
+  judging, observability validation, and regression gates.
+- [`MVP_PROGRESS.md`](MVP_PROGRESS.md) — implementation checkpoints and verification.
+- [`SUBMISSION_AUDIT.md`](SUBMISSION_AUDIT.md) — requirement-by-requirement status.
+- [`AI_USAGE.md`](AI_USAGE.md) and [`logs/`](logs/) — AI-use disclosure and authentic
+  filtered Codex history.
+- [`research-agent-init.md`](research-agent-init.md) — authoritative assignment.
 
-## Implemented in this repository
+## Implemented and tested
 
-- The required design document and evaluation plan.
-- A reviewer-oriented project status and AI-use disclosure.
-- A filtered export of the actual Codex session history.
+- Strict Pydantic schemas for objectives, task plans, structured planner actions,
+  tool execution, evidence lineage, report claims, citations, and trace events.
+- A provider-neutral LLM boundary, deterministic scripted client, and injectable
+  OpenAI Responses API adapter.
+- A versioned `ToolRegistry` with runtime lookup plus strict input/output validation.
+- A generic Tavily `search_web` adapter that requests cleaned full content, disables
+  generated answers, and bounds results, response bytes, timeouts, and retries.
+- A sequential bounded planner → tool → observation loop. Successful research output
+  is normalized into exact hashed snapshots/chunks, then structured evidence is
+  extracted before the next planner decision.
+- Evidence-ID-only synthesis, deterministic lineage validation, URL resolution from
+  source records, deduplicated inline citations, and explicit partial limitations.
+- A live-capable CLI with plain report output or one parseable `--trace` JSON result.
+- Deterministic demonstrations for unrelated technology-comparison and
+  conflicting-science queries through the same runtime and tool definition.
 
-There is currently **no runnable research-agent prototype and no claimed test or
-evaluation result**. An earlier prototype-first scaffold was removed after the
-assignment was clarified to prioritize system design.
+The default offline suite currently has **100 passing tests and one skipped live
+test**. It makes no paid API or internet calls.
 
-## Designed / proposed
+## Implemented but not live-verified
 
-- Multi-turn `ResearchSession` state with immutable original intent and versioned
-  `ResearchObjective`s.
-- LLM-generated task DAGs and semantic selection from a dynamic ToolRegistry/MCP
-  catalog.
-- Runtime validation of structured actions, schemas, permissions, budgets, retries,
-  timeouts, concurrency, and state transitions.
-- Retrieval, snapshot, chunk, evidence, finding, report-claim, and inline-citation
-  lineage.
-- Coverage evaluation, context re-grounding, contradiction handling, cited
-  synthesis, and verification.
-- Structured traces and a reproducible synthetic/replay/live evaluation program.
+The OpenAI and Tavily adapters and their composition are tested with injected clients.
+The current development environment has no provider credentials and live opt-in is
+off, so no live answer quality, availability, latency, or cost result is claimed.
 
-These items are design commitments, not implemented features.
+## Designed, not implemented
 
-## Future work
+- Multi-turn user steering and immutable objective-version reconciliation.
+- Durable persistence, a full task-DAG scheduler, and bounded parallel execution.
+- Capability search for very large catalogs and MCP transport.
+- Coverage sufficiency evaluation, contradiction clustering, semantic entailment and
+  numeric verification, repair passes, and planner-loop fingerprinting.
+- The full synthetic/replay/live benchmark and measured research-quality gates in
+  `EVALUATION.md`.
 
-The smallest useful prototype should demonstrate:
+Exact excerpt containment and referential lineage are verified; semantic entailment
+is not. The prototype is not a production security or reliability claim.
 
-```text
-user query
-  -> LLM planner
-  -> validated AgentAction
-  -> dynamically selected real read-only research tool
-  -> observation and immutable source snapshot
-  -> chunk-linked Evidence
-  -> next LLM decision
-  -> verified cited response
+## Setup and commands
+
+Python 3.9 or newer is required.
+
+```bash
+python -m venv .venv
+.venv/bin/python -m pip install -e '.[dev]'
+.venv/bin/python -m pytest -q -W error
 ```
 
-It should add focused tests for invalid schemas, unknown tools, retry/timeout behavior,
-hard limits, citation resolution, and at least two unrelated query types through the
-same code path. Durable distributed workers, a large UI, long-term memory, and
-write-capable tools remain later work.
+For a live CLI run, copy `.env.example` to `.env` and supply
+`OPENAI_API_KEY` and `TAVILY_API_KEY`; `OPENAI_MODEL` is optional.
+
+```bash
+.venv/bin/research-agent "Your research question"
+.venv/bin/research-agent --trace "Your research question"
+```
+
+Normal mode writes a complete or useful partial report to stdout. `--trace` writes one
+JSON object containing status, report, unresolved questions, and trace events.
+Configuration errors exit 2; terminal runtime failures exit 1.
+
+The paid/network smoke test is opt-in and remains skipped unless the flag and both
+credentials are present:
+
+```bash
+RUN_LIVE_TESTS=1 .venv/bin/python -m pytest -q -m live
+```
 
 ## Architecture at a glance
 
-The conversation API converts user messages into versioned objectives. A deterministic
-runtime repeatedly provides the active objective, coverage gaps, evidence references,
-available tool schemas, and remaining budget to an LLM planner. Validated actions run
-through a bounded task scheduler and tool-policy boundary. Retrieved content becomes
-immutable source/chunk/evidence records. An evaluator decides whether gaps justify
-more work; a synthesizer drafts only from evidence IDs; a verifier checks lineage and
-entailment before citations are rendered. See [`DESIGN.md`](DESIGN.md) for diagrams
-and failure paths.
+```text
+query → structured LLM plan → structured action → ToolRegistry
+      → validated tool result → snapshot/chunks → evidence
+      → next LLM decision → ID-only synthesis → validated inline citations
+```
 
-## Running the prototype and tests
-
-There is no prototype or test harness yet, so there are no honest run/test commands to
-provide. The proposed implementation and verification boundary is documented in
-`DESIGN.md`; the planned automated evaluation harness is documented in
-`EVALUATION.md`.
+The model owns semantic planning, tool choice, evidence extraction, and drafting. The
+runtime owns schemas, execution, retry/timeout policy, limits, state, provenance, and
+citation resolution. There are no finance-, regulation-, technology-, or science-
+specific application workflows.
 
 ## Assumptions
 
-- The initial system is a single service with read-only tools and one tenant.
-- Steering is processed between tool calls in the MVP.
-- Tool/model providers are replaceable behind structured interfaces.
-- Source snapshots are retained where licensing permits.
-- Evaluation thresholds are proposals until calibrated on human-labeled runs.
-- The Codex history export is filtered rather than raw; its exact exclusions are
-  documented and no conversation was manually fabricated.
+- The prototype is one in-memory, single-tenant CLI process with one read-only search
+  integration.
+- Tavily cleaned raw content is the retained tool snapshot; it is not claimed to be
+  byte-identical to the publisher's original page.
+- Provider/model behavior is replaceable behind structured interfaces.
+- Proposed evaluation thresholds require calibration on human-labeled runs.
+- The Codex history is an authentic filtered export, not a reconstructed transcript;
+  exclusions are documented in [`logs/README.md`](logs/README.md).

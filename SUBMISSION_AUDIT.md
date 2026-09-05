@@ -1,135 +1,99 @@
 # Submission Audit
 
-Audit status is based on repository evidence, not intended future behavior:
+Status is based on repository evidence:
 
-- **Complete** — required document/export exists and was checked.
-- **Designed** — architecture is specified but no prototype demonstrates it.
-- **Not implemented** — no runnable code or measured result exists.
+- **Complete** — required written artifact exists and was checked.
+- **Verified** — implemented behavior has deterministic test evidence.
+- **Implemented, live unverified** — adapter/code exists and is tested with fakes, but
+  no real provider call succeeded in this environment.
+- **Designed** — described in the architecture/evaluation plan but not implemented.
+- **Not implemented** — neither code nor measured result exists.
 
 ## Required deliverables
 
-| Requirement | Status | Repository evidence / limitation |
+| Requirement | Status | Evidence / limitation |
 |---|---|---|
-| Prompt History / Conversation Logs | Complete, filtered export | `logs/codex-session-export.jsonl`; actual user/assistant/tool records, with exact exclusions in `logs/README.md`. Not a raw internal-session dump. |
-| Design Document | Complete | `DESIGN.md`; four direct answers, 20 sections, and five Mermaid diagrams. |
-| Evaluation Plan | Complete | `EVALUATION.md`; benchmark, metrics, judge rubric, invariants, failure injection, repetitions, and regression gates. |
-| AI-use disclosure | Complete | `AI_USAGE.md`; includes human correction and prior prototype removal. |
-| Reviewer README | Complete | `README.md`; separates implemented, proposed, and future work. |
-| Prototype | Not implemented | Deliberately deferred; no run/test results are claimed. |
-
-## Phase 4 document-review findings
-
-The design and evaluation drafts were checked against the explicit requirements in
-`research-agent-init.md`. The review confirmed coverage of the four required design
-questions and found two areas worth making more explicit:
-
-1. Dynamic tool discovery needed direct evaluation rather than only a benchmark-case
-   mention. `EVALUATION.md` now defines catalog mutation/malicious-description tests,
-   candidate recall, valid selection, and unknown-tool proposal metrics.
-2. The retrieval/extraction separation needed an explicit invariant. The evaluation
-   now prevents search snippets or unsuccessful tool output from becoming substantive
-   evidence without a snapshot and exact chunk parent.
-
-`DESIGN.md` explicitly includes future improvements, prototype boundaries, and
-rejected alternatives. No significant prototype code was written before this review.
+| Prompt history | Complete, filtered export | `logs/codex-session-export.jsonl`; authentic user/assistant/tool records with exclusions in `logs/README.md` |
+| Design document | Complete | `DESIGN.md`; four direct answers, 20 sections, five Mermaid diagrams, and an updated prototype boundary |
+| Evaluation plan | Complete | `EVALUATION.md`; benchmark, metrics, judge rubric, invariants, faults, repetitions, and gates; it is not a results report |
+| AI-use disclosure | Complete | `AI_USAGE.md`; includes the human scope correction and implementation/recovery work |
+| Reviewer README | Complete | `README.md`; commands and verified/designed/unverified status |
+| Prototype | Verified offline | Installable CLI and 100 passing deterministic tests; one live test skipped because opt-in/credentials are absent |
 
 ## 1. System Architecture
 
-| Evaluation expectation | Status | Evidence |
+| Evaluation expectation | Status | Repository evidence / limitation |
 |---|---|---|
-| Explicit reasoning/execution loop | Designed | `DESIGN.md` §7, research-loop diagram and iteration contract |
-| Session state | Designed | §6 `ResearchSession`, objective, task, and budget models |
-| LLM-driven planning | Designed | §§4 Q2, 7, and 9; the runtime supplies goal/state/tools/budget and validates proposals |
-| User steering | Designed | §§4 Q1 and 8; refinement, redirect, drill-down, cancellation, resume |
-| Objective versioning | Designed | §§6 and 8; immutable versions and reconciliation |
-| Task dependencies / DAG | Designed | §10; cycle/depth/node validation and readiness |
-| Parallelism | Designed | §10; bounded concurrency, leases, isolated snapshots, late-result reconciliation |
-| Context-drift prevention | Designed | §§4 Q3 and 11; immutable original objective, coverage matrix, re-grounding, safe compaction |
-| Completion criteria | Designed | §7; semantic coverage plus deterministic lineage/limit gates |
-| General-purpose behavior | Designed | §§1–2, 9, and 17; no domain/keyword router |
-
-Audit conclusion: architecture addresses the assignment, but none of these mechanisms
-has runtime evidence yet.
+| Explicit planner/execution loop | Verified | `runtime.py`; structured plan, action, tool, observation, finish loop |
+| Session state | Verified, prototype subset | Strict in-memory `ResearchSession`; no durable or multi-turn session service |
+| LLM-driven planning/tool choice | Verified offline | Scripted clients drive plans/actions; OpenAI adapter is offline-tested |
+| User steering | Designed | `DESIGN.md` §§4 Q1 and 8; no runtime message reconciliation |
+| Objective versioning | Designed | Schema has a version, but update/reconciliation behavior is not implemented |
+| Task dependencies / DAG | Schema verified | References and cycles validate; no DAG scheduler/lifecycle execution |
+| Parallelism | Designed | No concurrent task executor |
+| Context-drift prevention | Partially verified | Original query/objective remain in prompts; no long-session compaction or re-grounding evaluator |
+| Completion criteria | Partially verified | Structured finish and hard limits work; semantic coverage sufficiency is model-proposed, not independently evaluated |
+| General-purpose behavior | Verified offline | Technology and conflicting-science cases use the same runtime and `search_web` definition |
 
 ## 2. Tool Use & Grounding
 
-| Evaluation expectation | Status | Evidence |
+| Evaluation expectation | Status | Repository evidence / limitation |
 |---|---|---|
-| Dynamic tool registration/discovery | Designed | `DESIGN.md` §9; versioned `ToolDefinition`, MCP/local adapters, catalog retrieval |
-| Dynamic semantic selection | Designed | §§4 Q2 and 9; model chooses from supplied schemas, runtime does not route by domain |
-| Structured interfaces | Designed | §§7 and 9; discriminated actions, input/output JSON Schemas, extra-field rejection |
-| Runtime validation | Designed | §9 invocation boundary; catalog, objective, schema, policy, URL, budget, retry checks |
-| External evidence | Designed | §§5 and 12; source ingestion and immutable snapshots |
-| Retrieval/extraction separation | Designed and evaluated | `DESIGN.md` §12; `EVALUATION.md` §4 and invariant 17 |
-| Evidence as structured data | Designed | `DESIGN.md` §12 entity table |
-| Inline citation traceability | Designed | §§4 Q4 and 12; claim → finding → evidence → chunk → snapshot → source → tool call |
-| Citation verification | Designed | §12; referential, numeric, entailment, bounded repair, renderer |
-| Real external research tool | Not implemented | No prototype exists. |
-| Unseen queries require no new workflow | Designed, not demonstrated | Catalog-driven architecture and `unknown_domain_*` evaluation cases |
-
-Audit conclusion: the lineage and trust boundaries are explicit; an end-to-end real
-tool demonstration remains future work.
+| Dynamic registration/lookup | Verified | Versioned registry, catalog hashing, duplicates, ambiguity, and unknown tools tested |
+| Dynamic semantic selection | Verified offline | Planner chooses among advertised fake tools; no domain router exists |
+| Structured interfaces | Verified | Strict Pydantic plan/action/tool/evidence/synthesis schemas reject extra fields |
+| Runtime validation | Verified subset | Tool/version, input/output, task reference, timeout, retry, and size checks; broader permission/URL policy is designed only |
+| Real external research tool | Implemented, live unverified | Tavily `search_web` requests full cleaned Markdown and maps typed failures; HTTP is mocked in default tests |
+| Retrieval/extraction separation | Verified | Snippets and failed results cannot create sources/evidence; extraction uses exact chunks |
+| Evidence/provenance | Verified | Hashes, offsets, excerpts, atomic creation, and call/result/snapshot/chunk/evidence walks tested |
+| Inline citation traceability | Verified | Synthesis accepts evidence IDs; renderer resolves stored sources and validates all edges |
+| Semantic citation correctness | Not implemented | Exact containment is not entailment; no model/human entailment verifier has run |
+| Unseen-query portability | Verified offline | Two unrelated cases require no application-code or catalog change |
 
 ## 3. Reliability & Error Handling
 
-| Evaluation expectation | Status | Evidence |
+| Evaluation expectation | Status | Repository evidence / limitation |
 |---|---|---|
-| Malformed structured output | Designed | `DESIGN.md` §13; bounded schema-guided repair then explicit failure |
-| Tool failure visibility | Designed | §13; typed failure observation returned to planner |
-| Retries/backoff | Designed | §13; typed retryability, idempotency, cap, jitter, attempt lineage |
-| Timeouts/rate limits/access/parse/empty result | Designed | §13 and evaluation failure matrix |
-| Fallbacks | Designed | Capability-based replanning through healthy registered tools |
-| Contradictory evidence | Designed | §12; conflict sets, scope/date resolution, both sides retained |
-| Partial completion | Designed | §§7 and 13; reserved synthesis budget and named unresolved gaps |
-| Planner-loop detection | Designed | §13; normalized fingerprints and coverage-progress windows |
-| Bounded autonomy | Designed | §§6 and 14; calls, iterations, retries, parallelism, time, tokens, cost, bytes |
-| Security/tool policy | Designed | §§9 and 14; least privilege, SSRF/redirect controls, prompt-injection isolation, secret handling |
-| Fault-recovery behavior | Designed, not demonstrated | `EVALUATION.md` §9; no executed tests yet |
-
-Audit conclusion: failure semantics and hard limits are detailed, but reliability
-claims remain proposals until a prototype and fault-injection harness run.
+| Malformed structured output | Verified | Invalid plan/action/evidence/synthesis output is rejected before unsafe mutation |
+| Tool failure visibility | Verified | Typed failure observations return to the next planner request |
+| Retries | Verified subset | Retryability, idempotency, and caps tested; exponential backoff/jitter is not implemented |
+| Timeout/rate/auth/parse/empty/size faults | Verified offline | Runtime and Tavily injected-fault tests cover each class |
+| Capability fallback | Partially verified | Failures are observable so the LLM can choose another catalog tool; broad fallback behavior is not benchmarked |
+| Contradictory evidence | Designed | No conflict clustering/resolution implementation |
+| Partial completion | Verified | Finish actions and hard limits preserve named unresolved questions |
+| Planner-loop handling | Partially verified | Hard iteration/call caps terminate; repeated-action fingerprints are not implemented |
+| Bounded autonomy | Verified subset | Iterations, logical calls, per-call retries/timeouts, output tokens, and result bytes; no cost/elapsed/concurrency ledger |
+| Secret handling | Verified offline | Secret types, sanitized adapter errors, configuration messages, and payload tests; no production red-team claim |
+| State preservation | Verified subset | Atomic evidence/report mutation tests; no persistence/interruption recovery |
 
 ## 4. Evaluation & Observability
 
-| Evaluation expectation | Status | Evidence |
+| Evaluation expectation | Status | Repository evidence / limitation |
 |---|---|---|
-| Diverse synthetic benchmark | Complete plan | `EVALUATION.md` §§2–4; ≥60 cases across all requested categories/difficulties |
-| Ambiguous-query tests | Complete plan | §4 decision classes and measured clarification behavior |
-| Multi-turn steering tests | Complete plan | §4 event-triggered messages and state/output assertions |
-| Context-drift tests | Complete plan | §4 lossy summaries, distractors, redirects, objective-fidelity formula |
-| Conflicting-source tests | Complete plan | §4 conflict types and resolution/qualification labels |
-| Tool-failure/failure injection | Complete plan | §9 fault schedule and expected assertions |
-| Citation coverage/correctness | Complete plan | §6 exact claim-level formulas and labeling procedure |
-| Source quality | Complete plan | §6 contextual five-factor annotations and formulas |
-| Answer completeness | Complete plan | §6 weighted atomic requirements |
-| Task completion / redundant calls | Complete plan | §6 formulas, trace inputs, and exceptions |
-| Latency/token/estimated cost | Complete plan | §6 timestamps, percentiles, provider counters, versioned price tables |
-| LLM-as-a-judge | Complete plan | §7 input boundary, output schema, anchored rubric, calibration |
-| Deterministic invariants | Complete plan | §8; 17 state, lineage, policy, budget, and termination checks |
-| Regression/repeated runs | Complete plan | §§5 and 12; 5×/10× runs, distribution reporting, held-out cases |
-| Structured observability | Designed | `DESIGN.md` §15 and `EVALUATION.md` §10; events, correlation, metrics, redaction |
-| Measured evaluation results | Not implemented | Thresholds are explicitly proposals, not observed scores. |
+| Diverse synthetic benchmark | Complete plan, not implemented | `EVALUATION.md` §§2–4 |
+| Ambiguity/steering/drift/conflict cases | Complete plan, not implemented | Detailed case families and metrics; no benchmark results |
+| Failure injection | Verified prototype subset | Deterministic unit/integration-style tests; full matrix/property suite is future work |
+| Citation invariants | Verified | Lineage, exact hashes/offsets, invalid IDs, unrelated sources, and URL provenance tested |
+| Generality demonstration | Verified offline | Two unrelated deterministic cases through the same path |
+| Structured observability | Verified prototype subset | Public trace events and parseable CLI output; no metrics dashboard/cost collector |
+| Default offline isolation | Verified | 100 pass; guarded live test is collected and skipped |
+| LLM-as-a-judge / human calibration | Not implemented | Rubric and protocol only |
+| Measured research quality/cost/latency | Not implemented | No live credentials, benchmark execution, or calibrated results |
 
-Audit conclusion: the plan goes beyond manual QA and specifies how metrics are
-derived. The next implementation milestone should build the trace/lineage substrate
-before attempting prose-quality evaluations.
+## Final checklist
 
-## Final verification checklist
+- [x] Planning and semantic tool selection are LLM-driven at the application boundary.
+- [x] Runtime schemas validate untrusted model and tool output.
+- [x] Execution, retries, timeouts, and core budgets are deterministically bounded.
+- [x] Evidence retains call/result/source/chunk provenance.
+- [x] Final URLs and inline citations resolve from validated evidence IDs.
+- [x] No domain-specific query workflow or hidden chain-of-thought dependency exists.
+- [x] Two unrelated query categories traverse the same generic path offline.
+- [x] Authentic filtered prompt/tool history is preserved with limitations disclosed.
+- [x] Implemented, live-unverified, designed, and future work are separated.
+- [ ] Live OpenAI/Tavily vertical slice verified (credentials/opt-in absent).
+- [ ] Semantic citation entailment, contradiction handling, steering, persistence,
+      full DAG execution, and the evaluation benchmark implemented.
+- [ ] Research-quality, latency, token-cost, and judge/human metrics measured.
 
-- [x] Planning is LLM-driven in the design.
-- [x] Tool selection is dynamic and catalog-driven in the design.
-- [x] Tools and agent actions use structured interfaces in the design.
-- [x] No domain-specific or example-specific workflow is introduced.
-- [x] User steering and objective versioning are explicit.
-- [x] Context drift is explicitly addressed and tested by the evaluation plan.
-- [x] Final citations are designed to resolve to specific tool results and source
-      bytes.
-- [x] Failures, contradictions, retries, limits, and partial completion are explicit.
-- [x] Observability avoids private chain-of-thought and includes cost/latency fields.
-- [x] Authentic prompt/tool history is exported with limitations disclosed.
-- [x] Implemented versus proposed work is clearly distinguished.
-- [ ] A working LLM/tool/evidence/citation prototype exists.
-- [ ] Focused runtime tests have executed.
-- [ ] Benchmark metrics have been measured and calibrated.
-
-The unchecked items are intentionally disclosed future work, not submission claims.
+The unchecked items are explicit limitations, not implied capabilities.

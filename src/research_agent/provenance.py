@@ -440,6 +440,32 @@ class EvidenceExtractor:
         self.llm_client = llm_client
         self.provenance = provenance or ProvenanceManager()
 
+    async def ingest_and_extract(
+        self,
+        session: ResearchSession,
+        *,
+        task_id: str,
+        tool_result_id: str,
+    ) -> list[Evidence]:
+        """Normalize one successful result, then extract from its exact chunks."""
+
+        snapshots = self.provenance.ingest_tool_result(session, tool_result_id)
+        snapshot_ids = {snapshot.id for snapshot in snapshots}
+        chunk_ids = [
+            chunk.id
+            for chunk in session.source_chunks
+            if chunk.source_snapshot_id in snapshot_ids
+        ]
+        if not chunk_ids:
+            raise EvidenceValidationError(
+                "tool result did not produce any full-content source chunks"
+            )
+        return await self.extract(
+            session,
+            task_id=task_id,
+            source_chunk_ids=chunk_ids,
+        )
+
     async def extract(
         self,
         session: ResearchSession,

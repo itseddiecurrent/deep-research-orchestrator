@@ -93,31 +93,31 @@ Status: **Approved as the prototype direction; implementation remains milestone-
   - [x] Structured synthesis using existing evidence IDs only
   - [x] Deterministic lineage validation and inline citation rendering
   - [x] Citation/provenance/fabricated-ID tests
-- [ ] Milestone 4 — Real external integration and CLI
-  - [ ] OpenAI Responses API adapter with configurable model
-  - [ ] Tavily `search_web` adapter with timeout and output bounds
-  - [ ] Environment/config validation without logging credentials
-  - [ ] CLI output for final report, limitations, and optional structured trace
-  - [ ] Opt-in live integration test that does not run in the default suite
-- [ ] Milestone 5 — Generality demonstration
-  - [ ] Run technology-comparison query without code changes
-  - [ ] Run conflicting-science query without code changes
-  - [ ] Optionally run current-policy comparison
-  - [ ] Save sanitized, timestamped report and trace artifacts if licensing permits
-  - [ ] Verify both required demos use the same runtime/tool registry
-- [ ] Milestone 6 — Submission reconciliation
-  - [ ] Update README implemented/designed/future status and commands
-  - [ ] Reconcile DESIGN.md prototype-scope statements
-  - [ ] Update SUBMISSION_AUDIT.md with only verified statuses
-  - [ ] Update AI_USAGE.md and refresh authentic Codex history export
-  - [ ] Run final repository, test, lineage, and disclosure audit
+- [x] Milestone 4 — Real external integration and CLI
+  - [x] OpenAI Responses API adapter with configurable model
+  - [x] Tavily `search_web` adapter with timeout and output bounds
+  - [x] Environment/config validation without logging credentials
+  - [x] CLI output for final report, limitations, and optional structured trace
+  - [x] Opt-in live integration test that does not run in the default suite
+- [x] Milestone 5 — Generality demonstration
+  - [x] Run technology-comparison query without code changes
+  - [x] Run conflicting-science query without code changes
+  - [x] Assess optional current-policy comparison (not run; no live credentials)
+  - [x] Assess artifact retention (no live external content existed to retain)
+  - [x] Verify both required demos use the same runtime/tool registry
+- [x] Milestone 6 — Submission reconciliation
+  - [x] Update README implemented/designed/future status and commands
+  - [x] Reconcile DESIGN.md prototype-scope statements
+  - [x] Update SUBMISSION_AUDIT.md with only verified statuses
+  - [x] Update AI_USAGE.md and refresh authentic Codex history export
+  - [x] Run final repository, test, lineage, and disclosure audit
 
 No implementation milestone is complete until its tests pass. Live-call success is
 reported separately from deterministic test success.
 
 ## 4. Current Repository State
 
-As of 2026-09-05 14:06 +08:00:
+As of 2026-09-05 15:51 +08:00:
 
 - Prototype package files now include `tools.py`, `llm.py`, `runtime.py`,
   `provenance.py`, and `synthesis.py` alongside `models.py`, `cli.py`, and
@@ -139,20 +139,28 @@ As of 2026-09-05 14:06 +08:00:
 - Structured synthesis accepts existing evidence IDs only; report claims/citations
   are built and validated atomically, then inline numbers and stored source URLs are
   rendered deterministically with repeated URLs deduplicated.
-- Tests are now in seven files under `tests/`; 59 deterministic offline tests pass.
-- The CLI exposes help/version and explicitly refuses live research because real LLM
-  and search adapters remain Milestone 4 work.
-- No semantic entailment verifier, real tool/provider adapter, live demo, or measured
+- Tests are now in thirteen files under `tests/`; 100 deterministic offline tests pass
+  and one explicitly marked live test is skipped by default.
+- Secret-safe environment loading, an injectable OpenAI Responses adapter, and a
+  bounded Tavily `search_web` adapter are implemented and deterministically tested;
+  neither live provider has been called.
+- Optional runtime evidence/synthesis integration now ingests and extracts successful
+  canonical tool output before replanning, exposes validated evidence to the next
+  decision, and turns evidence-backed finish actions into cited reports.
+- The installed CLI composes the OpenAI/Tavily runtime, emits plain reports or one
+  parseable `--trace` JSON document, and distinguishes useful partial output from
+  terminal/configuration failures.
+- No semantic entailment verifier, integrated live CLI run, live demo, or measured
   evaluation result exists yet.
-- `README.md`, `DESIGN.md`, `SUBMISSION_AUDIT.md`, and `AI_USAGE.md` still describe
-  the pre-prototype checkpoint; their final status reconciliation remains Milestone 6.
-  This file is authoritative for incremental prototype progress meanwhile.
+- `README.md`, `DESIGN.md`, `EVALUATION.md`, `SUBMISSION_AUDIT.md`, and `AI_USAGE.md`
+  now distinguish verified offline behavior, live-unverified adapters, design-only
+  capabilities, and future work.
 - A local `main` Git repository now targets
   `https://github.com/itseddiecurrent/deep-research-orchestrator.git`; `.env` and
   credential variants are ignored and never included in repository history.
-- Milestone 1 requires no credentials. Future live execution will require
-  `OPENAI_API_KEY`, `TAVILY_API_KEY`, and outbound network access; these have not been
-  checked.
+- Live execution requires `OPENAI_API_KEY`, `TAVILY_API_KEY`, explicit test opt-in,
+  and outbound network access; both credentials and opt-in are absent in the current
+  environment.
 - The filtered prompt-history export is refreshed at verified milestone boundaries;
   the final assistant handoff may be absent because it is emitted afterward.
 
@@ -286,39 +294,171 @@ Verified by:
 - `git diff --check`: passed;
 - no network or paid provider call was made.
 
+### Milestone 4 — adapter and configuration slice
+
+Status: Complete
+
+Implemented:
+
+- secret-masked `.env`/environment validation with configurable OpenAI model;
+- injectable OpenAI Responses client using the structured `text.format` request
+  shape, JSON parsing, token normalization, and sanitized provider failures;
+- Tavily bearer-authenticated `search_web` tool with generated answers disabled,
+  cleaned raw Markdown enabled, conservative result/domain bounds, response-size and
+  timeout controls, raw-content-only normalization, and typed failures.
+
+Relevant files:
+
+- `src/research_agent/config.py`, `src/research_agent/openai_adapter.py`,
+  `src/research_agent/web_search.py`, `.env.example`, and their three focused test
+  files.
+
+Verified by:
+
+- focused adapter/config tests: 24 passed with warnings treated as errors;
+- full deterministic suite: 83 passed with warnings treated as errors;
+- `python -m compileall -q src tests` and `git diff --check` passed;
+- official OpenAI Responses/Structured Outputs and Tavily Search API contracts were
+  checked; no network or paid provider call was made by the test suite.
+
+### Milestone 4 — runtime evidence and finalization slice
+
+Status: Complete
+
+Implemented:
+
+- optional runtime evidence extraction after a successful canonical tool result and
+  before the next planner action;
+- validated evidence in planner context, with extraction failures returned as safe
+  observations and structured trace events;
+- evidence-backed finish actions routed through lineage-validated cited synthesis,
+  preserving planner-declared partial limitations;
+- synthesis failure terminates explicitly without committing unvalidated claims or
+  citations; hooks-absent behavior is unchanged.
+
+Relevant files:
+
+- `src/research_agent/runtime.py`, `src/research_agent/provenance.py`,
+  `src/research_agent/synthesis.py`, `src/research_agent/models.py`, and focused
+  additions to `tests/test_runtime.py`.
+
+Verified by:
+
+- focused runtime/provenance/synthesis tests: 41 passed with warnings as errors;
+- full deterministic suite: 87 passed with warnings as errors;
+- compilation, dependency, and whitespace checks passed;
+- no network or paid provider call was made.
+
+### Milestone 4 — live-capable CLI and opt-in integration test
+
+Status: Complete
+
+Implemented:
+
+- a small composition root wiring secret-safe configuration, OpenAI, Tavily, the
+  dynamic registry, evidence extraction, cited synthesis, and bounded runtime;
+- plain complete/partial/failure CLI reports plus a single parseable `--trace` JSON
+  result containing status, report, unresolved questions, and public trace events;
+- deterministic resource cleanup and concise sanitized startup/configuration errors;
+- one `live`-marked end-to-end smoke test guarded by explicit opt-in and credentials.
+
+Relevant files:
+
+- `src/research_agent/application.py`, `src/research_agent/cli.py`, updates to
+  `pyproject.toml`, and `tests/test_application.py`, `tests/test_cli.py`, and
+  `tests/test_live_integration.py`.
+
+Verified by:
+
+- CLI/application/live-test-selection focus: 9 passed, 1 skipped;
+- full default suite: 93 passed, 1 skipped with warnings as errors;
+- installed `research-agent --version` and `--help` smoke checks;
+- compilation, dependency, and whitespace checks passed;
+- no paid/network call was made; live behavior remains separately unverified.
+
+### Milestone 5 — generality demonstration
+
+Status: Complete as a deterministic architecture proof; live quality is unverified
+
+Implemented:
+
+- parameterized technology-comparison and conflicting-science cases using the same
+  generic planner/action loop, `search_web` definition, registry, evidence extraction,
+  cited synthesis, and application code path;
+- query-specific behavior exists only in scripted model/fixture data, never in the
+  runtime or application routing.
+
+Relevant files:
+
+- `tests/test_generality.py`.
+
+Verified by:
+
+- both unrelated cases passed and selected the same catalog capability/version;
+- full deterministic suite: 95 passed, one guarded live test skipped;
+- environment check reported live opt-in false and both required credentials absent,
+  so no paid/network demo or external-content artifact was attempted.
+
+### Milestone 6 — submission reconciliation
+
+Status: Complete
+
+Implemented:
+
+- reviewer README now documents the runnable CLI, commands, verified boundary, and
+  explicit live/future limitations;
+- design/evaluation documents identify the current prototype subset without turning
+  proposed evaluation thresholds into claimed results;
+- submission audit and AI disclosure reflect implementation, recovery, offline tests,
+  and missing live credentials;
+- authentic filtered history includes all three actual Codex rollouts for the project;
+- final reliability review added true streaming response bounds, explicit OpenAI
+  terminal-status handling, and cited partial synthesis when limits follow evidence.
+
+Verified by:
+
+- full deterministic suite: 100 passed and one live test skipped with warnings as
+  errors;
+- compilation, installed CLI help/version, dependency, and whitespace checks passed;
+- history JSONL parsed, contained only the documented record types/roles, matched the
+  authentic source-log filter, and passed configured/common credential scans;
+- reviewer-document relative links resolved and stale implementation-status phrases
+  were audited; no paid/network call was made.
+
 ## 6. Current Task
 
-### Review Milestone 3 and authorize Milestone 4
+### Submission handoff
 
-Status: Ready — awaiting human direction
+Status: Complete — awaiting human review or optional credentialed live validation
 
 Objective:
 
-- review the verified provenance/evidence/synthesis/citation boundary;
-- confirm whether to begin Milestone 4: OpenAI Responses adapter, Tavily search tool,
-  environment validation, live-capable CLI, and opt-in integration test.
+- preserve this verified checkpoint and disclose any later live/benchmark results
+  separately from the deterministic prototype evidence.
 
 Files expected to be modified:
 
-- none until Milestone 4 is authorized; update this checkpoint first when it is.
+- none unless human review requests changes or credentials are supplied for the
+  explicitly opt-in live smoke test.
 
 Expected behavior:
 
-- the repository remains at the verified, published Milestone 3 checkpoint;
-- live calls remain opt-in and credentials must never enter prompts, trace data,
-  command output, or Git history.
+- required implementation and documentation milestones remain verified;
+- live provider behavior, semantic entailment, and benchmark results remain explicitly
+  unverified rather than inferred from offline tests.
 
 Tests that prove completion:
 
-- none for this review gate. Milestone 4 tests will prove adapter request/response
-  normalization, environment errors, Tavily bounds/timeouts, CLI report/trace output,
-  and default-skipped live integration behavior.
+- rerun only checks relevant to any later change; run the guarded live test only with
+  explicit opt-in and credentials.
 
 ## 7. Tests and Verification
 
-Current status: 59 deterministic offline tests pass across schemas, CLI, registry,
-scripted LLM client, bounded runtime, provenance, evidence, citation integrity,
-synthesis rendering, failures, retries, timeouts, and trace behavior.
+Current status: 100 deterministic offline tests pass and one live test skips by
+default across schemas, CLI, registry,
+scripted/OpenAI LLM clients, configuration, bounded runtime, Tavily normalization,
+provenance, evidence, citation integrity, synthesis rendering, failures, retries,
+timeouts, response bounds, and trace behavior.
 
 | Required coverage | Status | Planned proof |
 |---|---|---|
@@ -335,8 +475,8 @@ synthesis rendering, failures, retries, timeouts, and trace behavior.
 | 11. Evidence keeps provenance | Verified | Exact hashes/offsets/excerpts and successful call→result→snapshot→chunk→evidence walk |
 | 12. Citation IDs resolve | Verified | Claims render only after every evidence/chunk/snapshot/result/call edge validates |
 | 13. Fabricated citation IDs rejected | Verified | Unknown evidence, unrelated source links, duplicate IDs, and free-form URLs fail |
-| 14. Two unrelated queries, same runtime | Planned | Parameterized scripted test plus separate opt-in live demos |
-| Real external tool | Planned | Tavily integration test skipped unless key/network explicitly enabled |
+| 14. Two unrelated queries, same runtime | Verified offline | Technology and conflicting-science cases use the same generic path |
+| Real external tool | Adapter verified offline | Live test exists but skipped because opt-in/credentials are absent |
 | Hidden chain-of-thought independence | Schema verified | Trace exposes `decision_summary`; no reasoning field exists |
 
 Default tests must be deterministic, offline, and free of paid API calls. Live tests
@@ -344,15 +484,16 @@ must be opt-in and clearly labeled.
 
 ## 8. Known Issues / Risks
 
-- OpenAI and Tavily credentials/availability are unknown.
+- OpenAI and Tavily credentials are absent and live opt-in is false in the current
+  environment; provider availability and live behavior remain unverified.
 - External search results are nondeterministic and may change between demo runs.
 - Tavily cleaned raw content proves lineage to a tool result, not byte identity with
   the original publisher page.
 - Exact excerpt containment proves referential provenance, not semantic entailment.
 - One tool limits fallback and tool-selection breadth; two registered fake tools in
   tests can still prove dynamic selection mechanics.
-- A weak or flaky live demo could reduce confidence relative to the design-only
-  submission.
+- A weak or flaky future live demo could reduce confidence relative to the current
+  deterministic evidence.
 - The repository has only a new local history; Milestone 3 is published to the
   configured GitHub origin and future milestones must be pushed after verification.
 - User steering, objective versioning, persistence, DAG concurrency, contradiction
@@ -364,29 +505,31 @@ must be opt-in and clearly labeled.
 
 ## 9. Remaining Work
 
-1. Review/authorize Milestone 4 real provider/tool/CLI integration.
-2. Add and exercise OpenAI and Tavily adapters behind existing interfaces.
-3. Run at least two unrelated demos through the unchanged runtime.
-4. Reconcile reviewer documents and refresh the authentic session export.
-5. Complete the final submission audit without overstating results.
+No required prototype milestone remains. Optional future work is credentialed live
+validation, semantic verification, steering/persistence/DAG execution, and the full
+evaluation benchmark described in `DESIGN.md` and `EVALUATION.md`.
 
 ## 10. Last Verified Checkpoint
 
-Last verified: 2026-09-05 14:09:34 +08:00
+Last verified: 2026-09-05 15:51:03 +08:00
 
-- Repository inventory: written deliverables plus verified Milestone 1–3 package/tests.
-- Git status/diff: local `main` and `origin/main` resolve to the verified Milestone 3
-  implementation commit; the worktree was clean immediately after publication.
+- Repository inventory: reconciled written deliverables and verified Milestones 1–6
+  package, adapters, CLI, tests, and filtered history export.
+- Git status/diff: local `main` and `origin/main` remain at the verified Milestone 3
+  publication commit; Milestone 4 work is intentionally uncommitted and preserved.
 - Python compilation: passed for `src` and `tests`.
-- Prototype unit tests: 59 passed with warnings treated as errors; dependency and
-  whitespace checks passed.
-- Integration/demo runs: not present; not run.
+- Prototype unit tests: 100 passed and one guarded live test skipped with warnings
+  treated as errors; dependency, compilation, and whitespace checks passed.
+- Integration/demo runs: two unrelated deterministic end-to-end cases passed; live
+  provider execution was not run because opt-in and credentials are absent.
 - Working behavior: scripted structured planning, dynamic validated tool execution,
-  bounded observation loop, provenance ingestion/evidence validation, ID-constrained
-  synthesis, deterministic inline citations, retries/failures/limits, terminal state,
-  and trace work; live providers and semantic entailment do not.
-- Prompt history: filtered authentic export is refreshed at milestone boundaries;
-  this publication-reconciliation turn may be absent until the next refresh.
+  bounded observation loop, integrated provenance ingestion/evidence validation,
+  evidence-aware replanning, ID-constrained synthesis, deterministic inline citations,
+  retries/failures/limits, provider adapters, live-capable CLI, and trace work; live
+  verification and semantic entailment do not yet; unrelated-query behavior is
+  demonstrated deterministically through the same generic path.
+- Prompt history: filtered authentic export was refreshed from all three actual local
+  project rollouts; the final assistant handoff may be absent until a later refresh.
 - Commands used: `python -m compileall -q src tests`, `pytest -q -W error`,
   `python -m pip check`, and `git diff --check`.
 
