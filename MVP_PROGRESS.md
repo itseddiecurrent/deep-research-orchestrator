@@ -494,8 +494,8 @@ must be opt-in and clearly labeled.
   tests can still prove dynamic selection mechanics.
 - A weak or flaky future live demo could reduce confidence relative to the current
   deterministic evidence.
-- The repository has only a new local history; Milestone 3 is published to the
-  configured GitHub origin and future milestones must be pushed after verification.
+- The repository has only a new local history; the verified Milestones 1–6 are
+  published to the configured GitHub origin.
 - User steering, objective versioning, persistence, DAG concurrency, contradiction
   handling, and full evaluation remain unimplemented by deliberate scope choice.
 - Saved external content may have retention/licensing constraints; prefer short
@@ -511,12 +511,13 @@ evaluation benchmark described in `DESIGN.md` and `EVALUATION.md`.
 
 ## 10. Last Verified Checkpoint
 
-Last verified: 2026-09-05 15:51:03 +08:00
+Last verified: 2026-09-05 15:53:44 +08:00
 
 - Repository inventory: reconciled written deliverables and verified Milestones 1–6
   package, adapters, CLI, tests, and filtered history export.
-- Git status/diff: local `main` and `origin/main` remain at the verified Milestone 3
-  publication commit; Milestone 4 work is intentionally uncommitted and preserved.
+- Git status/diff: local `main` and `origin/main` resolve to verified Milestone 6
+  implementation commit `98b1832`; only the pre-existing untracked
+  `reconnect-prompt.txt` remains intentionally untouched.
 - Python compilation: passed for `src` and `tests`.
 - Prototype unit tests: 100 passed and one guarded live test skipped with warnings
   treated as errors; dependency, compilation, and whitespace checks passed.
