@@ -288,28 +288,31 @@ Verified by:
 
 ## 6. Current Task
 
-### Publish the verified Milestone 3 checkpoint
+### Review Milestone 3 and authorize Milestone 4
 
-Status: In progress
+Status: Ready — awaiting human direction
 
 Objective:
 
-- commit the verified Milestone 3 implementation and refreshed authentic history;
-- push `main` to the configured GitHub origin and verify local/remote commit equality.
+- review the verified provenance/evidence/synthesis/citation boundary;
+- confirm whether to begin Milestone 4: OpenAI Responses adapter, Tavily search tool,
+  environment validation, live-capable CLI, and opt-in integration test.
 
 Files expected to be modified:
 
-- the Milestone 3 source/tests/checkpoint and authentic history export only.
+- none until Milestone 4 is authorized; update this checkpoint first when it is.
 
 Expected behavior:
 
-- ignored credentials/generated artifacts remain outside Git history;
-- the pushed commit exactly matches the locally verified checkpoint.
+- the repository remains at the verified, published Milestone 3 checkpoint;
+- live calls remain opt-in and credentials must never enter prompts, trace data,
+  command output, or Git history.
 
 Tests that prove completion:
 
-- staged-content/credential exclusion and `git diff --cached --check`;
-- successful push followed by equal `HEAD` and `origin/main` revisions.
+- none for this review gate. Milestone 4 tests will prove adapter request/response
+  normalization, environment errors, Tavily bounds/timeouts, CLI report/trace output,
+  and default-skipped live integration behavior.
 
 ## 7. Tests and Verification
 
@@ -350,7 +353,7 @@ must be opt-in and clearly labeled.
   tests can still prove dynamic selection mechanics.
 - A weak or flaky live demo could reduce confidence relative to the design-only
   submission.
-- The repository has only a new local history; Milestone 2 is published to the
+- The repository has only a new local history; Milestone 3 is published to the
   configured GitHub origin and future milestones must be pushed after verification.
 - User steering, objective versioning, persistence, DAG concurrency, contradiction
   handling, and full evaluation remain unimplemented by deliberate scope choice.
@@ -361,20 +364,19 @@ must be opt-in and clearly labeled.
 
 ## 9. Remaining Work
 
-1. Publish the verified Milestone 3 checkpoint and verify the remote revision.
-2. Review/authorize Milestone 4 real provider/tool/CLI integration.
-3. Add and exercise OpenAI and Tavily adapters behind existing interfaces.
-4. Run at least two unrelated demos through the unchanged runtime.
-5. Reconcile reviewer documents and refresh the authentic session export.
-6. Complete the final submission audit without overstating results.
+1. Review/authorize Milestone 4 real provider/tool/CLI integration.
+2. Add and exercise OpenAI and Tavily adapters behind existing interfaces.
+3. Run at least two unrelated demos through the unchanged runtime.
+4. Reconcile reviewer documents and refresh the authentic session export.
+5. Complete the final submission audit without overstating results.
 
 ## 10. Last Verified Checkpoint
 
-Last verified: 2026-09-05 14:06:00 +08:00
+Last verified: 2026-09-05 14:09:34 +08:00
 
 - Repository inventory: written deliverables plus verified Milestone 1–3 package/tests.
-- Git status/diff: local/remote started aligned at the published Milestone 2 commit;
-  reviewed Milestone 3 changes are awaiting their checkpoint commit and push.
+- Git status/diff: local `main` and `origin/main` resolve to the verified Milestone 3
+  implementation commit; the worktree was clean immediately after publication.
 - Python compilation: passed for `src` and `tests`.
 - Prototype unit tests: 59 passed with warnings treated as errors; dependency and
   whitespace checks passed.
