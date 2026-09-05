@@ -537,13 +537,14 @@ described in `DESIGN.md` and `EVALUATION.md`.
 
 ## 10. Last Verified Checkpoint
 
-Last verified: 2026-09-05 18:09:32 +08:00
+Last verified: 2026-09-05 18:20:59 +08:00
 
 - Repository inventory: reconciled written deliverables and verified Milestones 1–7
   package, adapters, CLI/browser UI, tests, and filtered history export.
 - Git status/diff: local `main` and `origin/main` are aligned and contain verified
-  deliverables and interactive-prototype commit `b2e8e09`; only the pre-existing
-  untracked `reconnect-prompt.txt` remains intentionally untouched.
+  readable-transcript commit `7f5bbe2` on top of the deliverables and
+  interactive-prototype publication; only the pre-existing untracked
+  `reconnect-prompt.txt` remains intentionally untouched.
 - Python compilation: passed for `src` and `tests`.
 - Prototype unit tests: 116 passed and one guarded live test skipped with warnings
   treated as errors; dependency, compilation, and whitespace checks passed.
@@ -558,9 +559,9 @@ Last verified: 2026-09-05 18:09:32 +08:00
   work; semantic entailment does not yet. Unrelated-query behavior is demonstrated
   deterministically through the same generic path, and the provider vertical slice
   is verified by bounded manual smoke runs.
-- Prompt history: the filtered authentic export was refreshed from all five local
-  project rollouts through the refresh point; the final assistant handoff may be
-  absent until a later refresh.
+- Prompt history: the filtered authentic JSONL and mechanically rendered readable
+  text transcript were refreshed from all five local project rollouts through the
+  refresh point; the final assistant handoff may be absent until a later refresh.
 - Commands used: `python -m compileall -q src tests`, `pytest -q -W error`,
   `python -m pip check`, and `git diff --check`.
 
