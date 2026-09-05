@@ -243,32 +243,31 @@ Verified by:
 
 ## 6. Current Task
 
-### Publish the verified Milestone 2 checkpoint
+### Review Milestone 2 and authorize Milestone 3
 
-Status: Blocked — the supplied GitHub token is present but GitHub returns HTTP 403
-(`write access to repository not granted`)
+Status: Ready — awaiting human direction
 
 Objective:
 
-- preserve the verified Milestone 2 state in the new local Git repository;
-- push `main` to the configured GitHub origin once the token has repository write
-  access, then make Milestone 3 the current task.
+- review the verified registry/LLM/runtime boundary;
+- confirm whether to begin Milestone 3: source normalization, exact excerpt evidence,
+  structured synthesis, lineage validation, and deterministic citation rendering.
 
 Files expected to be modified:
 
-- only the local Git commit and this checkpoint until remote authentication works.
+- none until Milestone 3 is authorized; update this checkpoint first when it is.
 
 Expected behavior:
 
-- `.env`, virtual environments, caches, generated package metadata, and `.DS_Store`
-  remain untracked;
-- the milestone commit is pushed without placing credentials in the remote URL,
-  files, process output, or Git history.
+- the repository remains at the verified, published Milestone 2 checkpoint;
+- Milestone 3 begins only with a written behavior/test contract, without adding a
+  real provider or conflating search snippets with evidence.
 
 Tests that prove completion:
 
-- local clean-status/commit inspection and remote branch verification after push;
-- the already verified 38-test suite remains green before publication.
+- none for this review gate. Milestone 3 tests will prove content hashing/chunk
+  offsets, exact excerpt containment, successful-call lineage, fabricated/cross-link
+  rejection, synthesis ID restrictions, source deduplication, and rendered citations.
 
 ## 7. Tests and Verification
 
@@ -308,8 +307,8 @@ must be opt-in and clearly labeled.
   tests can still prove dynamic selection mechanics.
 - A weak or flaky live demo could reduce confidence relative to the design-only
   submission.
-- The repository has only a new local history; remote publication is currently
-  blocked by the GitHub token's repository access.
+- The repository has only a new local history; Milestone 2 is published to the
+  configured GitHub origin and future milestones must be pushed after verification.
 - User steering, objective versioning, persistence, DAG concurrency, contradiction
   handling, and full evaluation remain unimplemented by deliberate scope choice.
 - Saved external content may have retention/licensing constraints; prefer short
@@ -319,29 +318,28 @@ must be opt-in and clearly labeled.
 
 ## 9. Remaining Work
 
-1. Grant the configured GitHub token write access and push the Milestone 2 checkpoint.
-2. Review/authorize the Milestone 3 behavior/test contract.
-3. Implement and verify provenance creation and deterministic citation rendering.
-4. Add and exercise OpenAI and Tavily adapters behind existing interfaces.
-5. Run at least two unrelated demos through the unchanged runtime.
-6. Reconcile reviewer documents and refresh the authentic session export.
-7. Complete the final submission audit without overstating results.
+1. Review/authorize the Milestone 3 behavior/test contract.
+2. Implement and verify provenance creation and deterministic citation rendering.
+3. Add and exercise OpenAI and Tavily adapters behind existing interfaces.
+4. Run at least two unrelated demos through the unchanged runtime.
+5. Reconcile reviewer documents and refresh the authentic session export.
+6. Complete the final submission audit without overstating results.
 
 ## 10. Last Verified Checkpoint
 
-Last verified: 2026-09-05 13:24:02 +08:00
+Last verified: 2026-09-05 13:49:26 +08:00
 
 - Repository inventory: written deliverables plus verified Milestone 1–2 package/tests.
-- Git status/diff: local `main` milestone commit created with a clean worktree and
-  origin configured; authenticated remote read/push access returns HTTP 403.
+- Git status/diff: local `main` and `origin/main` both resolve to the verified
+  Milestone 2 commit; the worktree was clean immediately after publication.
 - Python compilation: passed for `src` and `tests`.
 - Prototype unit tests: 38 passed without warnings; dependency check passed.
 - Integration/demo runs: not present; not run.
 - Working behavior: scripted structured planning, dynamic validated tool execution,
   bounded observation loop, retries/failures/limits, terminal state, and trace work;
   provenance/citations and live providers do not.
-- Prompt history: filtered authentic export refreshed through this checkpoint; the
-  final assistant handoff and final push retry may be absent.
+- Prompt history: filtered authentic export is refreshed at milestone boundaries;
+  this publication-reconciliation turn may be absent until the next refresh.
 - Commands used: `python -m compileall -q src tests`, `pytest -q`,
   `python -m pip check`, `research-agent --version`, and CLI help smoke check.
 
